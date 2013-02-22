@@ -1,0 +1,2 @@
+We tested our MiniJava.lex file against the given input file, test.java, and matched the results in the given test.out file.
+We also tested it against our own example, test2.java, and got output which can be seen in test2.out. 

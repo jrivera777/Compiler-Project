@@ -1,0 +1,92 @@
+//Doug Ostott
+//Joseph Rivera
+//Assignment 3: MiniJava Grammar
+
+package parse;
+
+parser code {:
+  errormsg.ErrorMsg errorMsg;
+
+  public void syntax_error(java_cup.runtime.Symbol current) {
+    report_error("Syntax error (" + current.sym + ")", current);
+  }
+
+  public void report_error(String message, java_cup.runtime.Symbol info) {
+    errorMsg.error(info.left, message);
+  }
+
+  public Grm(java_cup.runtime.Scanner scan, errormsg.ErrorMsg err) {
+    this(scan);
+    errorMsg = err;
+  }
+:};
+
+terminal String ID;
+terminal int  	INTEGER_LITERAL;
+terminal 	CLASS, PUBLIC, STATIC, VOID, MAIN, STRING, RETURN,
+		INT, BOOLEAN, IF, ELSE, WHILE, PRINTLN, LENGTH,
+		TRUE, FALSE, THIS, NEW, LBRACE, RBRACE, LPAREN,
+		RPAREN, LBRACK, RBRACK,	SEMICOLON, COMMA, ASSIGN,
+		AND, LT, PLUS, MINUS, TIMES, DOT, EXCLAMATION;
+
+non terminal Program, MainClass, ClassDecl, VarDecl, VarDeclList,
+    	     MethodDecl, MethodDeclList, FormalList, FormalRest,
+	     Type, Statement, StatementList, Exp, ExpList, ExpRest;
+
+precedence left 	AND;
+precedence left		LT;
+precedence left 	PLUS, MINUS;
+precedence left 	TIMES;
+precedence left 	EXCLAMATION;
+precedence left		LBRACK, DOT;
+
+start with Program;
+
+Program		::= MainClass ClassDecl;
+MainClass	::= CLASS ID LBRACE PUBLIC STATIC VOID MAIN LPAREN STRING
+		    LBRACK RBRACK ID RPAREN LBRACE Statement RBRACE RBRACE;
+ClassDecl	::= ClassDecl CLASS ID LBRACE VarDeclList MethodDeclList RBRACE
+		|   ;
+VarDeclList	::= VarDeclList VarDecl
+		| ;
+VarDecl		::= Type ID SEMICOLON;
+MethodDeclList	::= MethodDeclList MethodDecl
+		|   ;
+MethodDecl	::= PUBLIC Type ID LPAREN FormalList RPAREN LBRACE VarDeclList StatementList RETURN Exp SEMICOLON RBRACE;
+FormalList	::= Type ID FormalRest
+		|   ;
+FormalRest 	::= COMMA Type ID FormalRest
+		|   ;
+Type		::= ID
+		|   BOOLEAN
+		|   INT
+		|   INT LBRACK RBRACK;
+StatementList	::= Statement StatementList
+		|   ;
+Statement	::= LBRACE StatementList RBRACE
+		|   IF LPAREN Exp RPAREN Statement ELSE Statement
+		|   WHILE LPAREN Exp RPAREN Statement
+		|   PRINTLN LPAREN Exp RPAREN SEMICOLON
+		|   ID ASSIGN Exp SEMICOLON
+		|   ID LBRACK Exp RBRACK ASSIGN Exp SEMICOLON;
+Exp		::= Exp PLUS Exp
+		|   Exp MINUS Exp
+		|   Exp TIMES Exp
+		|   Exp AND Exp
+		|   Exp LT Exp
+		|   Exp LBRACK Exp RBRACK
+		|   Exp DOT LENGTH
+		|   Exp DOT ID LPAREN ExpList RPAREN
+		|   INTEGER_LITERAL
+		|   TRUE
+		|   FALSE
+		|   ID
+		|   THIS
+		|   NEW INT LBRACK Exp RBRACK
+		|   NEW ID LPAREN RPAREN
+		|   EXCLAMATION Exp
+		|   LPAREN Exp RPAREN;
+ExpList		::= Exp ExpRest
+		|   ;
+ExpRest		::= COMMA Exp ExpRest
+		|   ;

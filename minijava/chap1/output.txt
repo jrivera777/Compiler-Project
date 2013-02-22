@@ -1,0 +1,17 @@
+From our main in interp.java:
+
+maxargs result: 2
+interpretation result: 8 7
+80
+maxargs result: 2
+interpretation result: 6 54
+maxargs result: 3
+interpretation result: 3
+6 9 6
+maxargs result: 2
+interpretation result: 7 14 8
+8
+
+
+NOTE: We renamed the classes in each prog file to match the file names, 
+allowing us to run all four tests at once.
