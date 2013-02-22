@@ -1,0 +1,14 @@
+INSTALL
+LICENSE
+README
+*.class
+*.err
+*.html
+*.gif
+*.out
+*.QUICK
+#*#
+gnuwin/
+JLex/
+java_cup/
+winnt/
