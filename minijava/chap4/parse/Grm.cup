@@ -1,0 +1,146 @@
+//Doug Ostott
+//Joseph Rivera
+//Assignment 4: MiniJava Grammar with Abstract Syntax Tree Generation
+
+package parse;
+
+import syntaxtree.*;
+
+action code {:
+
+  // An abbreviation for creating identifiers.
+  static Identifier id(String s) {
+    return new Identifier(s);
+  }
+
+:};
+
+parser code {:
+
+  errormsg.ErrorMsg errorMsg;
+
+  public void syntax_error(java_cup.runtime.Symbol current) {
+    report_error("Syntax error (" + current.sym + ")", current);
+  }
+
+  public void report_error(String message, java_cup.runtime.Symbol info) {
+    errorMsg.error(info.left, message);
+  }
+
+  public Grm(java_cup.runtime.Scanner scan, errormsg.ErrorMsg err) {
+    this(scan);
+    errorMsg = err;
+  }
+
+:};
+
+// Notice the type declarations for ID and INTEGER_LITERAL; these are
+// the only tokens with non-null semantic values.
+terminal Identifier    		ID;
+terminal Integer		INTEGER_LITERAL;
+terminal			CLASS, PUBLIC, STATIC, VOID, MAIN, STRING,
+				RETURN, ELSE, LBRACE, RBRACE, LPAREN,
+				RPAREN, LBRACK, RBRACK, SEMICOLON, COMMA;
+terminal syntaxtree.Type	INT;
+terminal syntaxtree.Type	BOOLEAN;
+terminal syntaxtree.Statement	IF;
+terminal syntaxtree.Statement	WHILE;
+terminal syntaxtree.Statement	PRINTLN;
+terminal syntaxtree.Exp		LENGTH;
+terminal syntaxtree.Exp		TRUE;
+terminal syntaxtree.Exp		FALSE;
+terminal syntaxtree.Exp		THIS;
+terminal syntaxtree.Exp		NEW;
+terminal syntaxtree.Statement	ASSIGN;
+terminal syntaxtree.Exp	      	AND;
+terminal syntaxtree.Exp		LT;
+terminal syntaxtree.Exp		PLUS;
+terminal syntaxtree.Exp		MINUS;
+terminal syntaxtree.Exp		TIMES;
+terminal syntaxtree.Exp		DOT;
+terminal syntaxtree.Exp		EXCLAMATION;
+
+// The syntaxtree classes are summarized on page 99.  Note that they have been
+// augmented with a pos field to record their position in the source file.
+
+non terminal syntaxtree.Program		Program;
+non terminal syntaxtree.MainClass	MainClass;
+non terminal syntaxtree.ClassDecl	ClassDecl;
+non terminal syntaxtree.VarDecl		VarDecl;
+non terminal syntaxtree.MethodDecl	MethodDecl;
+non terminal syntaxtree.FormalList	FormalRest;
+non terminal syntaxtree.Type		Type;
+non terminal syntaxtree.Statement	Statement;
+non terminal syntaxtree.Exp             Exp;
+non terminal syntaxtree.ExpList		ExpRest;
+non terminal syntaxtree.ClassDeclList	ClassDeclList;
+non terminal syntaxtree.MethodDeclList	MethodDeclList;
+non terminal syntaxtree.FormalList	FormalList;
+non terminal syntaxtree.VarDeclList	VarDeclList;
+non terminal syntaxtree.StatementList	StatementList;
+non terminal syntaxtree.ExpList		ExpList;
+
+
+
+
+
+precedence left 	AND;
+precedence left		LT;
+precedence left 	PLUS, MINUS;
+precedence left 	TIMES;
+precedence left 	EXCLAMATION;
+precedence left		LBRACK, DOT;
+
+start with Program;
+
+Program 	::= MainClass:m ClassDecl:c1
+		    {: RESULT = new Program(mleft, m, c1); :}
+		;		;
+MainClass	::= CLASS:c ID:i1 LBRACE PUBLIC STATIC VOID MAIN LPAREN STRING
+		    LBRACK RBRACK ID:i2 RPAREN LBRACE Statement:s RBRACE RBRACE
+		    {: RESULT = new MainClassDecl(cleft, i1, i2, s); :}
+		;
+ClassDeclList	::= ClassDeclList:cL ClassDecl:c
+		    {: cL.addElement(c); RESULT = : cL;}
+		|   {: RESULT = new ClassDeclList(); :}
+		;
+ClassDecl	::= CLASS:c ID:i LBRACE VarDeclList:vL MethodDeclList:mL RBRACE
+		    {: RESULT = new ClassDeclSimple(cleft, i, vL, mL); :}
+		;
+VarDeclList	::= VarDeclList:vL VarDecl:v
+		    {: vL.addElement(v); RESULT = vL; :}
+		|   {: RESULT = new VarDeclList(); :}
+		;
+VarDecl		::= Type:t ID:i SEMICOLON
+		    {: RESULT = new VarDecl(ileft, t, i); :}
+		;
+MethodDeclList	::= MethodDeclList:mL MethodDecl;mD
+		    {: mL.addElement(mD); RESULT = mL; :}
+		|   {: RESULT = new MethodDecl(); :}
+		;
+MethodDecl	::= PUBLIC Type:t ID:i LPAREN FormalList:fL RPAREN LBRACE VarDeclList:vL StatementList:sL RETURN Exp:e1 SEMICOLON RBRACE
+		    {: RESULT = new MethodDecl(ileft, t, i, fL, vL, sL, e1); :}
+		;
+FormalList	::= Type:t ID:i
+		    {: RESULT = new Formal(ileft, t, i); :}
+		|   Type:t ID:i COMMA FormalRest:fR
+		    {: fR.addElement(new Formal(ileft, t, i)); RESULT = fR; :}
+		|   {: RESULT = new FormalList(); :}
+		;
+FormalRest	::= Type:t ID:i
+		    {: RESULT = new Formal(ileft, t, i); :}
+		|   FormalRest:fR COMMA Type:t ID:i
+		    {: fR.addElement(new Formal(ileft, t, id); :}
+		;
+
+
+// Note how CUP gives access to semantic values and positions.
+// For example, the identifier i below gives the semantic value of the
+// INTEGER_LITERAL token, and ileft gives its position.
+
+Exp		::= Exp:e1 AND:a Exp:e2
+			{: RESULT = new And(aleft, e1, e2); :}
+		|   INTEGER_LITERAL:i
+		    {: RESULT = new IntegerLiteral(ileft, i.intValue()); :}
+		;
+
