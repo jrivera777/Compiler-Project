@@ -21,17 +21,17 @@ parser code {:
   }
 :};
 
-terminal String ID;
-terminal int  	INTEGER_LITERAL;
-terminal 	CLASS, PUBLIC, STATIC, VOID, MAIN, STRING, RETURN,
-		INT, BOOLEAN, IF, ELSE, WHILE, PRINTLN, LENGTH,
-		TRUE, FALSE, THIS, NEW, LBRACE, RBRACE, LPAREN,
-		RPAREN, LBRACK, RBRACK,	SEMICOLON, COMMA, ASSIGN,
-		AND, LT, PLUS, MINUS, TIMES, DOT, EXCLAMATION;
+terminal 		ID;
+terminal 		INTEGER_LITERAL;
+terminal 		CLASS, PUBLIC, STATIC, VOID, MAIN, STRING, RETURN,
+			INT, BOOLEAN, IF, ELSE, WHILE, PRINTLN, LENGTH,
+			TRUE, FALSE, THIS, NEW, LBRACE, RBRACE, LPAREN,
+			RPAREN, LBRACK, RBRACK,	SEMICOLON, COMMA, ASSIGN,
+			AND, LT, PLUS, MINUS, TIMES, DOT, EXCLAMATION;
 
-non terminal Program, MainClass, ClassDecl, VarDecl, VarDeclList,
-    	     MethodDecl, MethodDeclList, FormalList, FormalRest,
-	     Type, Statement, StatementList, Exp, ExpList, ExpRest;
+non terminal 		Program, MainClass, ClassDecl, ClassDeclList, VarDecl, VarDeclList,
+    	     		MethodDecl, MethodDeclList, FormalList, FormalRest,
+			Type, Statement, StatementList, Exp, ExpList, ExpRest;
 
 precedence left 	AND;
 precedence left		LT;
@@ -42,21 +42,27 @@ precedence left		LBRACK, DOT;
 
 start with Program;
 
-Program		::= MainClass ClassDecl;
+Program		::= MainClass ClassDeclList;
 MainClass	::= CLASS ID LBRACE PUBLIC STATIC VOID MAIN LPAREN STRING
 		    LBRACK RBRACK ID RPAREN LBRACE Statement RBRACE RBRACE;
-ClassDecl	::= ClassDecl CLASS ID LBRACE VarDeclList MethodDeclList RBRACE
+ClassDeclList	::= ClassDeclList ClassDecl
 		|   ;
+ClassDecl	::= CLASS ID LBRACE VarDeclList MethodDeclList RBRACE;
 VarDeclList	::= VarDeclList VarDecl
 		| ;
 VarDecl		::= Type ID SEMICOLON;
 MethodDeclList	::= MethodDeclList MethodDecl
 		|   ;
 MethodDecl	::= PUBLIC Type ID LPAREN FormalList RPAREN LBRACE VarDeclList StatementList RETURN Exp SEMICOLON RBRACE;
-FormalList	::= Type ID FormalRest
+FormalList	::= Type ID
+		|   Type ID COMMA FormalRest
 		|   ;
-FormalRest 	::= COMMA Type ID FormalRest
-		|   ;
+FormalRest	::= Type ID
+		|   FormalRest COMMA Type ID;
+//FormalList	::= Type ID FormalRest
+//		|   ;
+//FormalRest 	::= COMMA Type ID FormalRest
+//		|   ;
 Type		::= ID
 		|   BOOLEAN
 		|   INT
