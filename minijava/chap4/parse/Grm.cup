@@ -36,7 +36,7 @@ parser code {:
 
 // Notice the type declarations for ID and INTEGER_LITERAL; these are
 // the only tokens with non-null semantic values.
-terminal Identifier    		ID;
+terminal String    		ID;
 terminal Integer		INTEGER_LITERAL;
 terminal			CLASS, PUBLIC, STATIC, VOID, MAIN, STRING,
 				RETURN, ELSE, LBRACE, RBRACE, LPAREN,
@@ -81,9 +81,6 @@ non terminal syntaxtree.StatementList	StatementList;
 non terminal syntaxtree.ExpList		ExpList;
 
 
-
-
-
 precedence left 	AND;
 precedence left		LT;
 precedence left 	PLUS, MINUS;
@@ -98,42 +95,83 @@ Program 	::= MainClass:m ClassDecl:c1
 		;		;
 MainClass	::= CLASS:c ID:i1 LBRACE PUBLIC STATIC VOID MAIN LPAREN STRING
 		    LBRACK RBRACK ID:i2 RPAREN LBRACE Statement:s RBRACE RBRACE
-		    {: RESULT = new MainClassDecl(cleft, i1, i2, s); :}
+		    {: RESULT = new MainClassDecl(cleft, id(i1), id(i2), s); :}
 		;
 ClassDeclList	::= ClassDeclList:cL ClassDecl:c
 		    {: cL.addElement(c); RESULT = : cL;}
 		|   {: RESULT = new ClassDeclList(); :}
 		;
 ClassDecl	::= CLASS:c ID:i LBRACE VarDeclList:vL MethodDeclList:mL RBRACE
-		    {: RESULT = new ClassDeclSimple(cleft, i, vL, mL); :}
+		    {: RESULT = new ClassDeclSimple(cleft,id(i), vL, mL); :}
 		;
 VarDeclList	::= VarDeclList:vL VarDecl:v
 		    {: vL.addElement(v); RESULT = vL; :}
 		|   {: RESULT = new VarDeclList(); :}
 		;
 VarDecl		::= Type:t ID:i SEMICOLON
-		    {: RESULT = new VarDecl(ileft, t, i); :}
+		    {: RESULT = new VarDecl(ileft, t, id(i)); :}
 		;
 MethodDeclList	::= MethodDeclList:mL MethodDecl;mD
 		    {: mL.addElement(mD); RESULT = mL; :}
 		|   {: RESULT = new MethodDecl(); :}
 		;
 MethodDecl	::= PUBLIC Type:t ID:i LPAREN FormalList:fL RPAREN LBRACE VarDeclList:vL StatementList:sL RETURN Exp:e1 SEMICOLON RBRACE
-		    {: RESULT = new MethodDecl(ileft, t, i, fL, vL, sL, e1); :}
+		    {: RESULT = new MethodDecl(ileft, t, id(i), fL, vL, sL, e1); :}
 		;
 FormalList	::= Type:t ID:i
-		    {: RESULT = new Formal(ileft, t, i); :}
+		    {: RESULT = new Formal(ileft, t, id(i)); :}
 		|   Type:t ID:i COMMA FormalRest:fR
-		    {: fR.addElement(new Formal(ileft, t, i)); RESULT = fR; :}
+		    {: fR.addElement(new Formal(ileft, t, id(i))); RESULT = fR; :}
 		|   {: RESULT = new FormalList(); :}
 		;
 FormalRest	::= Type:t ID:i
-		    {: RESULT = new Formal(ileft, t, i); :}
+		    {: RESULT = new Formal(ileft, t, id(i)); :}
 		|   FormalRest:fR COMMA Type:t ID:i
-		    {: fR.addElement(new Formal(ileft, t, id); :}
+		    {: fR.addElement(new Formal(ileft, t, id(id))); :}
 		;
-
-
+StatementList	::= Statement:s StatementList:sL
+		    {::} //Must do efficiently
+		|   {: RESULT = new StatementList(); :}
+		;
+Statement	::= LBRACE StatementList:sL RBRACE
+		    {:RESULT = new Block(sLleft, sL); :}
+		|   IF:if LPAREN Exp:e1 RPAREN Statement:s1 ELSE Statement:s2
+		    {: Result = new If(ifleft, e1, s1, s2); :}
+		|   WHILE:w LPAREN Exp:e1 RPAREN Statement:s
+		    {: RESULT = new While(wleft, e1, s); :}
+		|   PRINTLN:p LPAREN Exp:e1 RPAREN SEMICOLON
+		    {: RESULT = new Print(pleft, e1); :}
+		|   ID:i ASSIGN:a Exp:e1 SEMICOLON
+		    {: RESULT = new Assign(aleft, id(i), e1); :}
+		|   ID:i LBRACK Exp:e1 RBRACK ASSIGN:a Exp:e2 SEMICOLON
+		    {: RESULT = new ArrayAssign(aleft, id(i), e1, e2); :}
+		;
+Exp		::= Exp:e1 PLUS:p Exp:e2
+		    {: RESULT = new Plus(pleft, e1, e2); :}
+		|   Exp:e1 MINUS:m Exp:e2
+		    {: RESULT = new Minus(mleft, e1, e2); :}
+		|   Exp:e1 TIMES:t Exp:e2
+		    {: RESULT = new Times(tleft, e1, e2); :}
+		|   Exp:e1 AND:a Exp:e2
+		    {: RESULT = new And(aleft, e1, e2); :}
+		|   Exp:e1 LT:lt Exp:e2
+		    {: RESULT = new LessThan(ltleft, e1, e2); :}
+		|   Exp LBRACK Exp RBRACK
+		|   Exp DOT LENGTH
+		|   Exp DOT ID LPAREN ExpList RPAREN
+		|   INTEGER_LITERAL
+		|   TRUE
+		|   FALSE
+		|   ID
+		|   THIS
+		|   NEW INT LBRACK Exp RBRACK
+		|   NEW ID LPAREN RPAREN
+		|   EXCLAMATION Exp
+		|   LPAREN Exp RPAREN;
+ExpList		::= Exp ExpRest
+		|   ;
+ExpRest		::= COMMA Exp ExpRest
+		|   ;
 // Note how CUP gives access to semantic values and positions.
 // For example, the identifier i below gives the semantic value of the
 // INTEGER_LITERAL token, and ileft gives its position.
