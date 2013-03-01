@@ -31,7 +31,7 @@ terminal 		CLASS, PUBLIC, STATIC, VOID, MAIN, STRING, RETURN,
 
 non terminal 		Program, MainClass, ClassDecl, ClassDeclList, VarDecl, VarDeclList,
     	     		MethodDecl, MethodDeclList, FormalList, FormalRest,
-			Type, Statement, StatementList, Exp, ExpList, ExpRest;
+			Type, Statement, StatementList, StatementRest, Exp, ExpList, ExpRest;
 
 precedence left 	AND;
 precedence left		LT;
@@ -59,15 +59,13 @@ FormalList	::= Type ID
 		|   ;
 FormalRest	::= Type ID
 		|   FormalRest COMMA Type ID;
-//FormalList	::= Type ID FormalRest
-//		|   ;
-//FormalRest 	::= COMMA Type ID FormalRest
-//		|   ;
 Type		::= ID
 		|   BOOLEAN
 		|   INT
 		|   INT LBRACK RBRACK;
-StatementList	::= Statement StatementList
+StatementList	::= Statement StatementRest
+		|   ;
+StatementRest	::= StatementRest Statement
 		|   ;
 Statement	::= LBRACE StatementList RBRACE
 		|   IF LPAREN Exp RPAREN Statement ELSE Statement
@@ -92,7 +90,8 @@ Exp		::= Exp PLUS Exp
 		|   NEW ID LPAREN RPAREN
 		|   EXCLAMATION Exp
 		|   LPAREN Exp RPAREN;
-ExpList		::= Exp ExpRest
+ExpList		::= Exp
+		|   ExpRest COMMA Exp
 		|   ;
-ExpRest		::= COMMA Exp ExpRest
-		|   ;
+ExpRest		::= Exp
+		|   ExpRest COMMA Exp;
