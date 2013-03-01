@@ -34,40 +34,35 @@ parser code {:
 
 :};
 
-// Notice the type declarations for ID and INTEGER_LITERAL; these are
-// the only tokens with non-null semantic values.
 terminal String    		ID;
 terminal Integer		INTEGER_LITERAL;
 terminal			CLASS, PUBLIC, STATIC, VOID, MAIN, STRING,
 				RETURN, ELSE, LBRACE, RBRACE, LPAREN,
 				RPAREN, LBRACK, RBRACK, SEMICOLON, COMMA;
-terminal syntaxtree.Type	INT;
-terminal syntaxtree.Type	BOOLEAN;
-terminal syntaxtree.Statement	IF, WHILE, PRINTLN, ASSIGN;
-terminal syntaxtree.Exp		LENGTH, TRUE, FALSE, THIS, NEW, AND,
+terminal 			INT;
+terminal			BOOLEAN;
+terminal 			IF, WHILE, PRINTLN, ASSIGN;
+terminal			LENGTH, TRUE, FALSE, THIS, NEW, AND,
 	 			LT, PLUS, MINUS, TIMES, DOT,
 				EXCLAMATION;
-
-// The syntaxtree classes are summarized on page 99.  Note that they have been
-// augmented with a pos field to record their position in the source file.
 
 non terminal syntaxtree.Program		Program;
 non terminal syntaxtree.MainClass	MainClass;
 non terminal syntaxtree.ClassDecl	ClassDecl;
+non terminal syntaxtree.ClassDeclList	ClassDeclList;
 non terminal syntaxtree.VarDecl		VarDecl;
+non terminal syntaxtree.VarDeclList	VarDeclList;
 non terminal syntaxtree.MethodDecl	MethodDecl;
-non terminal syntaxtree.FormalList	FormalRest;
+non terminal syntaxtree.MethodDeclList	MethodDeclList;
+non terminal syntaxtree.FormalList	FormalList;	// updated rules
+non terminal syntaxtree.FormalList	FormalRest;	// updated rules
 non terminal syntaxtree.Type		Type;
 non terminal syntaxtree.Statement	Statement;
+non terminal syntaxtree.StatementList	StatementList;	// updated and added rules to have
+non terminal syntaxtree.StatementList	StatementRest;	// efficient StatementList building
 non terminal syntaxtree.Exp             Exp;
-non terminal syntaxtree.ExpList		ExpRest;
-non terminal syntaxtree.ClassDeclList	ClassDeclList;
-non terminal syntaxtree.MethodDeclList	MethodDeclList;
-non terminal syntaxtree.FormalList	FormalList;
-non terminal syntaxtree.VarDeclList	VarDeclList;
-non terminal syntaxtree.StatementList	StatementList;
-non terminal syntaxtree.StatementList	StatementRest;
-non terminal syntaxtree.ExpList		ExpList;
+non terminal syntaxtree.ExpList		ExpRest;	// updated rules
+non terminal syntaxtree.ExpList		ExpList;	// updated rules
 
 precedence left 	AND;
 precedence left		LT;
@@ -103,12 +98,14 @@ MethodDeclList	::= MethodDeclList:mL MethodDecl:mD
 		    {: mL.addElement(mD); RESULT = mL; :}
 		|   {: RESULT = new MethodDeclList(); :}
 		;
-MethodDecl	::= PUBLIC Type:t ID:i LPAREN FormalList:fL RPAREN LBRACE VarDeclList:vL StatementList:sL RETURN Exp:e1 SEMICOLON RBRACE
-		    {: RESULT = new MethodDecl(ileft, t, id(i), fL, vL, sL, e1); :}
+MethodDecl	::= PUBLIC:p Type:t ID:i LPAREN FormalList:fL RPAREN
+		    LBRACE VarDeclList:vL StatementList:sL
+		    RETURN Exp:e1 SEMICOLON RBRACE
+		    {: RESULT = new MethodDecl(pleft, t, id(i), fL, vL, sL, e1); :}
 		;
 FormalList	::= Type:t ID:i
 		    {:
-		       syntaxtree.FormalList lst =  new FormalList();
+		       FormalList lst =  new FormalList();
 		       lst.addElement(new Formal(ileft, t, id(i)));
 		       RESULT = lst;
 		    :}
@@ -124,7 +121,7 @@ FormalList	::= Type:t ID:i
 		;
 FormalRest	::= Type:t ID:i
 		    {:
-		       syntaxtree.FormalList lst = new syntaxtree.FormalList();
+		       FormalList lst = new FormalList();
 		       lst.addElement(new Formal(ileft, t, id(i)));
 		       RESULT = lst;
 		    :}
@@ -181,8 +178,8 @@ Exp		::= Exp:e1 PLUS:p Exp:e2
 		    {: RESULT = new And(aleft, e1, e2); :}
 		|   Exp:e1 LT:lt Exp:e2
 		    {: RESULT = new LessThan(ltleft, e1, e2); :}
-		|   Exp:e1 LBRACK Exp:e2 RBRACK
-		    {: RESULT = new ArrayLookup(e1left, e1, e2); :}
+		|   Exp:e1 LBRACK:lb Exp:e2 RBRACK
+		    {: RESULT = new ArrayLookup(lbleft, e1, e2); :}
 		|   Exp:e1 DOT LENGTH
 		    {: RESULT = new ArrayLength(e1left, e1); :}
 		|   Exp:e1 DOT:d ID:i LPAREN ExpList:eL RPAREN
@@ -208,7 +205,7 @@ Exp		::= Exp:e1 PLUS:p Exp:e2
 		;
 ExpList		::= Exp:e1
 		    {:
-		       syntaxtree.ExpList lst = new ExpList();
+		       ExpList lst = new ExpList();
 		       lst.addElement(e1);
 		       RESULT = lst;
 		    :}
@@ -218,7 +215,7 @@ ExpList		::= Exp:e1
 		;
 ExpRest		::= Exp:e1
 		    {:
-			syntaxtree.ExpList lst = new ExpList();
+			ExpList lst = new ExpList();
 			lst.addElement(e1);
 			RESULT = lst;
 		    :}
