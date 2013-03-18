@@ -1,0 +1,224 @@
+//Doug Ostott
+//Joseph Rivera
+//Assignment 4: MiniJava Grammar with Abstract Syntax Tree Generation
+
+package parse;
+
+import syntaxtree.*;
+
+action code {:
+
+  // An abbreviation for creating identifiers.
+  static Identifier id(String s) {
+    return new Identifier(s);
+  }
+
+:};
+
+parser code {:
+
+  errormsg.ErrorMsg errorMsg;
+
+  public void syntax_error(java_cup.runtime.Symbol current) {
+    report_error("Syntax error (" + current.sym + ")", current);
+  }
+
+  public void report_error(String message, java_cup.runtime.Symbol info) {
+    errorMsg.error(info.left, message);
+  }
+
+  public Grm(java_cup.runtime.Scanner scan, errormsg.ErrorMsg err) {
+    this(scan);
+    errorMsg = err;
+  }
+
+:};
+
+terminal String    		ID;
+terminal Integer		INTEGER_LITERAL;
+terminal			CLASS, PUBLIC, STATIC, VOID, MAIN, STRING,
+				RETURN, ELSE, LBRACE, RBRACE, LPAREN,
+				RPAREN, LBRACK, RBRACK, SEMICOLON, COMMA;
+terminal 			INT;
+terminal			BOOLEAN;
+terminal 			IF, WHILE, PRINTLN, ASSIGN;
+terminal			LENGTH, TRUE, FALSE, THIS, NEW, AND,
+	 			LT, PLUS, MINUS, TIMES, DOT,
+				EXCLAMATION;
+
+non terminal syntaxtree.Program		Program;
+non terminal syntaxtree.MainClass	MainClass;
+non terminal syntaxtree.ClassDecl	ClassDecl;
+non terminal syntaxtree.ClassDeclList	ClassDeclList;
+non terminal syntaxtree.VarDecl		VarDecl;
+non terminal syntaxtree.VarDeclList	VarDeclList;
+non terminal syntaxtree.MethodDecl	MethodDecl;
+non terminal syntaxtree.MethodDeclList	MethodDeclList;
+non terminal syntaxtree.FormalList	FormalList;	// updated rules
+non terminal syntaxtree.FormalList	FormalRest;	// updated rules
+non terminal syntaxtree.Type		Type;
+non terminal syntaxtree.Statement	Statement;
+non terminal syntaxtree.StatementList	StatementList;	// updated and added rules to have
+non terminal syntaxtree.StatementList	StatementRest;	// efficient StatementList building
+non terminal syntaxtree.Exp             Exp;
+non terminal syntaxtree.ExpList		ExpRest;	// updated rules
+non terminal syntaxtree.ExpList		ExpList;	// updated rules
+
+precedence left 	AND;
+precedence left		LT;
+precedence left 	PLUS, MINUS;
+precedence left 	TIMES;
+precedence left 	EXCLAMATION;
+precedence left		LBRACK, DOT;
+
+start with Program;
+
+Program 	::= MainClass:m ClassDeclList:c1
+		    {: RESULT = new Program(mleft, m, c1); :}
+		;
+MainClass	::= CLASS:c ID:i1 LBRACE PUBLIC STATIC VOID MAIN LPAREN STRING
+		    LBRACK RBRACK ID:i2 RPAREN LBRACE Statement:s RBRACE RBRACE
+		    {: RESULT = new MainClass(cleft, id(i1), id(i2), s); :}
+		;
+ClassDeclList	::= ClassDeclList:cL ClassDecl:c
+		    {: cL.addElement(c); RESULT = cL; :}
+		|   {: RESULT = new ClassDeclList(); :}
+		;
+ClassDecl	::= CLASS:c ID:i LBRACE VarDeclList:vL MethodDeclList:mL RBRACE
+		    {: RESULT = new ClassDeclSimple(cleft,id(i), vL, mL); :}
+		;
+VarDeclList	::= VarDeclList:vL VarDecl:v
+		    {: vL.addElement(v); RESULT = vL; :}
+		|   {: RESULT = new VarDeclList(); :}
+		;
+VarDecl		::= Type:t ID:i SEMICOLON
+		    {: RESULT = new VarDecl(ileft, t, id(i)); :}
+		;
+MethodDeclList	::= MethodDeclList:mL MethodDecl:mD
+		    {: mL.addElement(mD); RESULT = mL; :}
+		|   {: RESULT = new MethodDeclList(); :}
+		;
+MethodDecl	::= PUBLIC:p Type:t ID:i LPAREN FormalList:fL RPAREN
+		    LBRACE VarDeclList:vL StatementList:sL
+		    RETURN Exp:e1 SEMICOLON RBRACE
+		    {: RESULT = new MethodDecl(pleft, t, id(i), fL, vL, sL, e1); :}
+		;
+FormalList	::= Type:t ID:i
+		    {:
+		       FormalList lst =  new FormalList();
+		       lst.addElement(new Formal(ileft, t, id(i)));
+		       RESULT = lst;
+		    :}
+		|   Type:t ID:i COMMA FormalRest:fR
+		    {:
+			FormalList lst = new FormalList();
+			lst.addElement(new Formal(ileft, t, id(i)));
+			for(int j = 0; j < fR.size(); j++)
+			   lst.addElement(fR.elementAt(j));
+			RESULT = lst;
+		    :}
+		|   {: RESULT = new FormalList(); :}
+		;
+FormalRest	::= Type:t ID:i
+		    {:
+		       FormalList lst = new FormalList();
+		       lst.addElement(new Formal(ileft, t, id(i)));
+		       RESULT = lst;
+		    :}
+		|   FormalRest:fR COMMA Type:t ID:i
+		    {:
+		       fR.addElement(new Formal(ileft, t, id(i)));
+		       RESULT = fR;
+		    :}
+		;
+Type		::= ID:i
+		    {: RESULT = new IdentifierType(ileft, i); :}
+		|   BOOLEAN:b
+		    {: RESULT = new BooleanType(bleft); :}
+		|   INT:i
+		    {: RESULT = new IntegerType(ileft); :}
+		|   INT:i LBRACK RBRACK
+		    {: RESULT = new IntArrayType(ileft); :}
+		;
+StatementList	::= Statement:s StatementRest:sR
+		    {:
+		       StatementList lst = new StatementList();
+		       lst.addElement(s);
+		       for(int i = 0; i < sR.size(); i++){
+		          lst.addElement(sR.elementAt(i));
+		       }
+		       RESULT = lst;
+		    :}
+		|   {: RESULT = new StatementList(); :}
+		;
+StatementRest	::= StatementRest:sR Statement:s
+		    {: sR.addElement(s); RESULT = sR; :}
+		|   {: RESULT = new StatementList(); :}
+		;
+Statement	::= LBRACE StatementList:sL RBRACE
+		    {:RESULT = new Block(sLleft, sL); :}
+		|   IF:i LPAREN Exp:e1 RPAREN Statement:s1 ELSE Statement:s2
+		    {: RESULT = new If(ileft, e1, s1, s2); :}
+		|   WHILE:w LPAREN Exp:e1 RPAREN Statement:s
+		    {: RESULT = new While(wleft, e1, s); :}
+		|   PRINTLN:p LPAREN Exp:e1 RPAREN SEMICOLON
+		    {: RESULT = new Print(pleft, e1); :}
+		|   ID:i ASSIGN:a Exp:e1 SEMICOLON
+		    {: RESULT = new Assign(aleft, id(i), e1); :}
+		|   ID:i LBRACK Exp:e1 RBRACK ASSIGN:a Exp:e2 SEMICOLON
+		    {: RESULT = new ArrayAssign(aleft, id(i), e1, e2); :}
+		;
+Exp		::= Exp:e1 PLUS:p Exp:e2
+		    {: RESULT = new Plus(pleft, e1, e2); :}
+		|   Exp:e1 MINUS:m Exp:e2
+		    {: RESULT = new Minus(mleft, e1, e2); :}
+		|   Exp:e1 TIMES:t Exp:e2
+		    {: RESULT = new Times(tleft, e1, e2); :}
+		|   Exp:e1 AND:a Exp:e2
+		    {: RESULT = new And(aleft, e1, e2); :}
+		|   Exp:e1 LT:lt Exp:e2
+		    {: RESULT = new LessThan(ltleft, e1, e2); :}
+		|   Exp:e1 LBRACK:lb Exp:e2 RBRACK
+		    {: RESULT = new ArrayLookup(lbleft, e1, e2); :}
+		|   Exp:e1 DOT LENGTH
+		    {: RESULT = new ArrayLength(e1left, e1); :}
+		|   Exp:e1 DOT:d ID:i LPAREN ExpList:eL RPAREN
+		    {: RESULT = new Call(dleft, e1, id(i), eL); :}
+		|   INTEGER_LITERAL:i
+		    {: RESULT = new IntegerLiteral(ileft, i.intValue()); :}
+		|   TRUE:t
+		    {: RESULT = new True(tleft); :}
+		|   FALSE:f
+		    {: RESULT = new False(fleft); :}
+		|   ID:i
+		    {: RESULT = new IdentifierExp(ileft, i); :}
+		|   THIS:t
+		    {: RESULT = new This(tleft); :}
+		|   NEW:n INT LBRACK Exp:e1 RBRACK
+		    {: RESULT = new NewArray(nleft, e1); :}
+		|   NEW:n ID:i LPAREN RPAREN
+		    {: RESULT = new NewObject(nleft, id(i)); :}
+		|   EXCLAMATION:x Exp:e1
+		    {: RESULT = new Not(xleft, e1); :}
+		|   LPAREN Exp:e1 RPAREN
+		    {: RESULT = e1; :}
+		;
+ExpList		::= Exp:e1
+		    {:
+		       ExpList lst = new ExpList();
+		       lst.addElement(e1);
+		       RESULT = lst;
+		    :}
+		|   ExpRest:eR COMMA Exp:e1
+		    {: eR.addElement(e1); RESULT = eR; :}
+		|   {: RESULT = new ExpList(); :}
+		;
+ExpRest		::= Exp:e1
+		    {:
+			ExpList lst = new ExpList();
+			lst.addElement(e1);
+			RESULT = lst;
+		    :}
+		|   ExpRest:eR COMMA Exp:e1
+		    {: eR.addElement(e1); RESULT = eR;:}
+		;

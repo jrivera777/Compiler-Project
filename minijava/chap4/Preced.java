@@ -10,6 +10,7 @@ class C {
   public int foo(int n, boolean b) {
     int i;
     int[] a;
+    d = 10;
 
     i = 3 + a [031];
     a[i] = 4 + a.length;
