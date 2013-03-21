@@ -42,7 +42,7 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor {
 	String id = n.i.toString();
 	currClass = classTable.get(id);
 	if(currClass == null)
-	    System.out.println("Cannot Find Symbol: " + id);
+	    errorMsg.error("Cannot Find Symbol: " + id);
 	else
 	{
 	    for ( int i = 0; i < n.vl.size(); i++ )
@@ -197,9 +197,13 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor {
 	Type t1 = n.e1.accept(this);
 	Type t2 = n.e2.accept(this);
 
-	if(!(t1 instanceof IntegerType))
+	if(t1 == null)
+	    errorMsg.error("Cannot Find Symbol: " + e1.);
+	if(t1 == null)
+	    errorMsg.error("Cannot Find Symbol: " + e2.);
+	else if(!(t1 instanceof IntegerType))
 	    errorMsg.error(n.e1.pos, eIncompTypes(t1.toString(), INTTY.toString()));
-	if(!(t2 instanceof IntegerType))
+	else if(!(t2 instanceof IntegerType))
 	    errorMsg.error(n.e2.pos, eIncompTypes(t2.toString(), INTTY.toString()));
 	return null;
     }
@@ -256,7 +260,7 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor {
 				       " in class " + currClass.getName());
 	    }
 	}
-
+	System.out.println("Just visited identifier [" + n.s  + "]");
 	return null;
     }
 

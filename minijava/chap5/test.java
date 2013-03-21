@@ -31,7 +31,7 @@ class Remix
 	w = new Bar();
 	arr[true] = 0;
 	arr[0] = 10;
-	arr[4] = false;
+	arr[4] = d;
 	return true;
     }
 }
