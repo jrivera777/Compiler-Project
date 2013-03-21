@@ -4,24 +4,34 @@ class Foo {
     }
 }
 
-class Bar {
+class Bar
+{
+    int x;
+    boolean y;
+    int y;
 
-    int c;
-    boolean c;
-    double d;
-
-    public int f(Foo a, int j) {
-	int [] b;
-	boolean x;
-	boolean a;
-
-	b = new int[5];
-	x = b[4];
-	b[true] = d;
-	b[b[2]] = this.f(c, x, a);
-	return b+7;
+    public int test()
+    {
+	x = 2 * 5;
+	y = !true;
+	return 0;
     }
-
 }
 
-class Bar { }
+class Remix
+{
+    int x;
+    public boolean WhereThePartyAt(int y)
+    {
+ 	Bar b;
+	int w;
+	int[] arr;
+	arr = new int[5];
+	b = new Bar();
+	w = new Bar();
+	arr[true] = 0;
+	arr[0] = 10;
+	arr[4] = false;
+	return true;
+    }
+}
