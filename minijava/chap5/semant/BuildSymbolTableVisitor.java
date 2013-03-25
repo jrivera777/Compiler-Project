@@ -75,7 +75,10 @@ public class BuildSymbolTableVisitor extends visitor.DepthFirstVisitor
 		}
 	    }
 	    else
+	    {
+		n.duplicate = true;
 		errorMsg.error(n.pos, "duplicate class : " + id);
+	    }
 	    currClass = null;
 	}
     }
@@ -102,7 +105,7 @@ public class BuildSymbolTableVisitor extends visitor.DepthFirstVisitor
 	    }
 	    else
 	    {
-
+		n.duplicate = true;
 		errorMsg.error(n.pos, id + currMethod.getFormalsTypes() + " is already defined in " + currClass.getName());
 	    }
 	    currMethod = null;

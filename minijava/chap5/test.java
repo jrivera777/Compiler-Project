@@ -1,7 +1,7 @@
 class Foo {
     public static void main(String[] a)
     {
-	System.out.println(new Remix().Dale());
+	System.out.println(this);
     }
 }
 
@@ -12,6 +12,9 @@ class Remix
     {
 	int x;
 
+	missing = false;
+	arr[false] = remix;
+	x = d;
 	if(new Remix().Dale() < 10)
 	{
 	    x = 10;
@@ -31,15 +34,5 @@ class Remix
 	    System.out.println(666);
 	}
 	return 0;
-    }
-}
-
-class Foo
-{
-    public boolean hollaFoADolla(FuckThePolice x)
-    {
-	int x;
-
-	return 666;
     }
 }

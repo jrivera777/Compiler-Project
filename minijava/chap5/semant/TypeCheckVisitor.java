@@ -12,7 +12,7 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
     private SymbolTable classTable;
     private ClassInfo currClass;
     private MethodInfo currMethod;
-
+    private boolean inMain;
     // Type constants
     final IntegerType INTTY = new IntegerType();
     final IntArrayType INTARRTY = new IntArrayType();
@@ -24,17 +24,17 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 	classTable = s;
 	currClass = null;
 	currMethod = null;
+	inMain = false;
     }
 
     // Identifier i1,i2;
     // Statement s;
     public Type visit(MainClass n)
     {
-	// Mostly you just need to typecheck the body of 'main' here.
-	// But as shown in Foo.java, you need care concerning 'this'.
+	inMain = true;
 	currClass = classTable.get(n.i1.toString());
 	n.s.accept(this);
-	currClass = null;
+	inMain = false;
 	return null;
     }
     // Identifier i;
@@ -44,7 +44,7 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
     {
 	if(!n.duplicate)
 	{
-	    System.out.println("Class " + n.i.s + " Found");
+
 	    String id = n.i.s;
 	    currClass = classTable.get(id);
 	    if(currClass == null)
@@ -56,7 +56,6 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 		for ( int i = 0; i < n.ml.size(); i++ )
 		    n.ml.elementAt(i).accept(this);
 	    }
-	    n.duplicate = true;
 	}
 	else
 	    System.out.println("Ignoring duplicate: " + n.i.s);
@@ -73,20 +72,16 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 	currMethod = currClass.getMethod(n.i.s);
 	if(!n.duplicate)
 	{
-	    System.out.println("Method " + n.i.s + " Found");
-	    for ( int i = 0; i < n.fl.size(); i++ ) {
+	    for ( int i = 0; i < n.fl.size(); i++ )
 		n.fl.elementAt(i).accept(this);
-	    }
-	    for ( int i = 0; i < n.vl.size(); i++ ) {
+	    for ( int i = 0; i < n.vl.size(); i++ )
 		n.vl.elementAt(i).accept(this);
-	    }
-	    for ( int i = 0; i < n.sl.size(); i++ ) {
+	    for ( int i = 0; i < n.sl.size(); i++ )
 		n.sl.elementAt(i).accept(this);
-	    }
+
 	    Type ret = n.e.accept(this);
 	    if(!ret.toString().equals(n.t.toString())) //check for correct return type
 		errorMsg.error(n.e.pos, eIncompTypes(ret.toString(), n.t.toString()));
-	    n.duplicate = true;
 	}
 	else
 	    System.out.println("Ignoring duplicate method: " + n.i.s);
@@ -153,6 +148,9 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 	Type t1 = n.i.accept(this);
 	Type t2 = n.e.accept(this);
 
+	if(t1 == null)
+	    errorMsg.error(n.pos, "cannot find Symbol '" + n.i.s +
+			   "' in class " + currClass.getName());
 	if(!equal(t1, t2, t1))
 	{
 	    if (!t1.toString().equals(t2.toString()))
@@ -165,10 +163,13 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
     // Exp e1,e2;
     public Type visit(ArrayAssign n)
     {
-	n.i.accept(this);
+	Type arrType = n.i.accept(this);
 	Type t1 = n.e1.accept(this);
 	Type t2 = n.e2.accept(this);
 
+	if(arrType == null)
+	    errorMsg.error(n.pos, "cannot find Symbol '" + n.i.s +
+			   "' in class " + currClass.getName());
 	if(t1 != null && !(t1 instanceof IntegerType))
 	    errorMsg.error(n.e1.pos, eIncompTypes(t1.toString(), INTTY.toString()));
 	if(t2 != null && !(t2 instanceof IntegerType))
@@ -192,11 +193,9 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 	Type t1 = n.e1.accept(this);
 	Type t2 = n.e2.accept(this);
 
-
 	if(t1 != null &&  t2 != null && (!(t1 instanceof IntegerType) || !(t2 instanceof IntegerType)))
 	    errorMsg.error(n.pos, eIncompBiop("<", t1.toString(), t2.toString()));
-	// if (!equal(t1, t2, INTTY))
-	//     errorMsg.error(n.pos, eIncompBiop("<", t1.toString(), t2.toString()));
+
 	return BOOLTY;
     }
 
@@ -250,7 +249,6 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
     // ExpList el;
     public Type visit(Call n)
     {
-	// System.out.println("Visting a Call\n===============");
 	String method = n.i.s;
 	MethodInfo mI = null;
 	Type t1 = n.e.accept(this); //determine type of caller
@@ -258,8 +256,6 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 	    errorMsg.error(n.e.pos, t1.toString() + "cannot be dereferenced"); // caller must be a class type
 	else
 	{
-	    // System.out.println("Calling Class = " + t1.toString());
-	    // System.out.println("Method Called = " + method);
 	    ClassInfo callingClass = classTable.get(t1.toString());
 	    if(callingClass != null)
 	    {
@@ -281,7 +277,6 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 				   callingClass.getName());
 		else
 		{
-		    // System.out.println("Found Method" + mI.getName());
 		    if(!sb.toString().equals(mI.getFormalsTypes()))
 			errorMsg.error(n.e.pos,
 				       eMethGivenTypes(currClass.getName() + "." + method, method + sb.toString(),
@@ -289,7 +284,6 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 		}
 	    }
 	}
-	// System.out.println("Exiting a Call\n===============");
 	if(mI == null)
 	    return null;
 	return mI.getReturnType();
@@ -298,7 +292,6 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
     // int i;
     public Type visit(IntegerLiteral n)
     {
-	// System.out.println("Visitied INTEGER_LITERAL");
 	return INTTY;
     }
 
@@ -316,41 +309,27 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
     public Type visit(IdentifierExp n)
     {
 	VariableInfo v = null;
-	if(currClass != null)
+
+	if(currMethod != null)
 	{
-	    if(currMethod != null)
-	    {
-		v = currMethod.getVar(n.s); //check locals
-		if(v == null)
-		{
-		    v = currClass.getField(n.s);
-		    if(v == null)
-		    {
-			errorMsg.error(n.pos,"cannot resolve symbol\nsymbol  : variable " + n.s +
-				       "\nlocation: class " + currClass.getName());
-			return null;
-		    }
-		}
-	    }
-	    else
-	    {
-		v = currClass.getField(n.s);
-		if(v == null)
-		{
-		    errorMsg.error(n.pos,"cannot resolve symbol\nsymbol  : variable " + n.s +
-				   "\nlocation: class " + currClass.getName());
-		    return null;
-		}
-	    }
+	    v = currMethod.getVar(n.s); //check locals
+	    if(v != null)
+		return v.type;
 	}
-	else
-	    errorMsg.error(n.pos, "cannot find Symbol '" + n.s +
-			   "' in class " + currClass.getName());
-	return v.type;
+
+	v = currClass.getField(n.s);
+	if(v != null)
+	    return v.type;
+
+	errorMsg.error(n.pos,"cannot resolve symbol\nsymbol  : variable " + n.s +
+		       "\nlocation: class " + currClass.getName());
+	return null;
     }
 
     public Type visit(This n)
     {
+	if(inMain)
+	    errorMsg.error(n.pos, "non-static variable \"this\" cannot be referenced from a static context");
 	if(currClass != null)
 	    return new IdentifierType(currClass.getName());
 	return null;
@@ -383,34 +362,18 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
     // String s;
     public Type visit(Identifier n)
     {
-	// System.out.println("Just visited identifier [" + n.s  + "]");
 	VariableInfo v = null;
 	if(currMethod != null)
 	{
-	    if(currClass.getMethod(n.s) == null)
-	    {
-		v = currMethod.getVar(n.s);
-		if(v != null)
-		    return v.type;
-		else if((v =currClass.getField(n.s)) != null)
-		    return v.type;
-		else
-		    errorMsg.error(" WOMPcannot find Symbol '" + n.s +
-				   "' in class " + currClass.getName());
-	    }
+	    v = currMethod.getVar(n.s);
+	    if(v != null)
+		return v.type;
 	}
-	else
-	{
-	    if(currClass.getMethod(n.s) == null)
-	    {
-		v = currClass.getField(n.s);
-		if(v != null)
-		    return v.type;
-		else
-		    errorMsg.error("TESTcannot find Symbol '" + n.s +
-				   "' in class " + currClass.getName());
-	    }
-	}
+
+	v = currClass.getField(n.s);
+	if(v != null)
+	    return v.type;
+
 	return null;
     }
 
