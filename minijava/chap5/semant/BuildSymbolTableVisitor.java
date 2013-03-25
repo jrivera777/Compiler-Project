@@ -1,12 +1,13 @@
+//Doug Otstott
+//Joseph Rivera
+//Assignment 5 Type Checker
+
 package semant;
 
 import syntaxtree.*;
 
 public class BuildSymbolTableVisitor extends visitor.DepthFirstVisitor
 {
-    // By extending DepthFirstVisitor, we only have to override those
-    // methods that differ from the generic visitor.
-
     private errormsg.ErrorMsg errorMsg;
     private SymbolTable classTable;
     private ClassInfo  currClass;
@@ -30,7 +31,6 @@ public class BuildSymbolTableVisitor extends visitor.DepthFirstVisitor
     {
 	String id = n.i1.toString();
 	classTable.addClass(id, new ClassInfo(id));
-	// No fields or methods in the Main class.
     }
 
     // Type t;
@@ -38,22 +38,20 @@ public class BuildSymbolTableVisitor extends visitor.DepthFirstVisitor
     public void visit(VarDecl n)
     {
 	String id = n.i.toString();
-//	System.out.println("Visiting variable = " + id + " with type " + n.t.toString());
 	if (currMethod == null)
 	{
-
 	    if (!currClass.addField(id, new VariableInfo(n.t)))
 		errorMsg.error(n.pos, id + " is already defined in " +
 			       currClass.getName());
 	}
 	else if (!currMethod.addVar(id, new VariableInfo(n.t)))
 	{
-//	    System.out.println("In Method: " + currMethod.getName());
 	    errorMsg.error(n.pos, id + " is already defined in " +
 			   currClass.getName() + "." +
 			   currMethod.getName() +  currMethod.getFormalsTypes());
 	}
     }
+
     // Identifier i;
     // VarDeclList vl;
     // MethodDeclList ml;
@@ -67,9 +65,8 @@ public class BuildSymbolTableVisitor extends visitor.DepthFirstVisitor
 		currClass =  new ClassInfo(id);
 		if(classTable.addClass(id, currClass))
 		{
-		    //	    System.out.println("Created new ClassInfo for " + currClass.getName());
 		    for(int i = 0; i < n.vl.size(); i++)
-			n.vl.elementAt(i).accept(this); //visit each vardecl in the class
+			n.vl.elementAt(i).accept(this); //visit each local variable declaration in the class
 		    for(int i = 0; i < n.ml.size(); i++)
 			n.ml.elementAt(i).accept(this); //visit all class methods
 		}
@@ -82,6 +79,7 @@ public class BuildSymbolTableVisitor extends visitor.DepthFirstVisitor
 	    currClass = null;
 	}
     }
+
     // Type t;
     // Identifier i;
     // FormalList fl;
@@ -90,25 +88,25 @@ public class BuildSymbolTableVisitor extends visitor.DepthFirstVisitor
     // Exp e;
     public void visit(MethodDecl n)
     {
-	    String id = n.i.toString();
-	    currMethod = currClass.getMethod(id);
-	    if(currMethod == null)
-	    {
-		currMethod  = new MethodInfo(id, n.t);
-		currClass.addMethod(id, currMethod);
-		for(int i = 0; i < n.fl.size(); i++)
-		    n.fl.elementAt(i).accept(this); //visit all formals, i.e. parameters
-		for(int i = 0; i < n.vl.size(); i++)
-		    n.vl.elementAt(i).accept(this); //visit all local variables
-		for(int i = 0; i < n.sl.size(); i++)
-		    n.sl.elementAt(i).accept(this);
-	    }
-	    else
-	    {
-		n.duplicate = true;
-		errorMsg.error(n.pos, id + currMethod.getFormalsTypes() + " is already defined in " + currClass.getName());
-	    }
-	    currMethod = null;
+	String id = n.i.toString();
+	currMethod = currClass.getMethod(id);
+	if(currMethod == null)
+	{
+	    currMethod  = new MethodInfo(id, n.t);
+	    currClass.addMethod(id, currMethod);
+	    for(int i = 0; i < n.fl.size(); i++)
+		n.fl.elementAt(i).accept(this); //visit all formals, i.e. parameters
+	    for(int i = 0; i < n.vl.size(); i++)
+		n.vl.elementAt(i).accept(this); //visit all local variables
+	    for(int i = 0; i < n.sl.size(); i++)
+		n.sl.elementAt(i).accept(this);
+	}
+	else
+	{
+	    n.duplicate = true;
+	    errorMsg.error(n.pos, id + currMethod.getFormalsTypes() + " is already defined in " + currClass.getName());
+	}
+	currMethod = null;
     }
 
     // Type t;

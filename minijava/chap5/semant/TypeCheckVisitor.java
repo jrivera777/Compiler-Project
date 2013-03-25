@@ -1,3 +1,7 @@
+//Doug Otstott
+//Joseph Rivera
+//Assignment 5: Type Checker
+
 package semant;
 
 import syntaxtree.*;
@@ -5,9 +9,6 @@ import java.util.Vector;
 
 public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 {
-    // By extending TypeDepthFirstVisitor, we only have to override those
-    // methods that differ from the generic visitor.
-
     private errormsg.ErrorMsg errorMsg;
     private SymbolTable classTable;
     private ClassInfo currClass;
@@ -37,6 +38,7 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 	inMain = false;
 	return null;
     }
+
     // Identifier i;
     // VarDeclList vl;
     // MethodDeclList ml;
@@ -44,7 +46,6 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
     {
 	if(!n.duplicate)
 	{
-
 	    String id = n.i.s;
 	    currClass = classTable.get(id);
 	    if(currClass == null)
@@ -57,8 +58,7 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 		    n.ml.elementAt(i).accept(this);
 	    }
 	}
-	else
-	    System.out.println("Ignoring duplicate: " + n.i.s);
+
 	return null;
     }
     // Type t;
@@ -83,38 +83,34 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 	    if(!ret.toString().equals(n.t.toString())) //check for correct return type
 		errorMsg.error(n.e.pos, eIncompTypes(ret.toString(), n.t.toString()));
 	}
-	else
-	    System.out.println("Ignoring duplicate method: " + n.i.s);
+
 	return null;
     }
 
     public Type visit(IntArrayType n)
     {
-	// System.out.println("Visitied INT_ARRAY_TYPE");
 	return INTARRTY;
     }
 
     public Type visit(BooleanType n)
     {
-	// System.out.println("Visitied BOOLEANTYPE");
 	return BOOLTY;
     }
 
     public Type visit(IntegerType n)
     {
-	// System.out.println("Visitied INTEGERTYPE");
 	return INTTY;
     }
 
     // String s;
     public Type visit(IdentifierType n)
     {
-	// System.out.println("Visitied IDENTIFIERTYPE");
 	if(classTable.get(n.s) == null)
 	{
 	    errorMsg.error(n.pos, "cannot Find Symbol '" + n.s + "'");
 	    return null;
 	}
+
 	return n;
     }
 
@@ -252,6 +248,7 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 	String method = n.i.s;
 	MethodInfo mI = null;
 	Type t1 = n.e.accept(this); //determine type of caller
+
 	if(!(t1 instanceof IdentifierType))
 	    errorMsg.error(n.e.pos, t1.toString() + "cannot be dereferenced"); // caller must be a class type
 	else
@@ -279,8 +276,8 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 		{
 		    if(!sb.toString().equals(mI.getFormalsTypes()))
 			errorMsg.error(n.e.pos,
-				       eMethGivenTypes(currClass.getName() + "." + method, method + sb.toString(),
-						       method + mI.getFormalsTypes()));
+				       eMethGivenTypes(currClass.getName() + "." + method,
+						       method + sb.toString(),	method + mI.getFormalsTypes()));
 		}
 	    }
 	}
@@ -317,7 +314,7 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 		return v.type;
 	}
 
-	v = currClass.getField(n.s);
+	v = currClass.getField(n.s); //check class variables
 	if(v != null)
 	    return v.type;
 
