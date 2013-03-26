@@ -249,13 +249,17 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 	MethodInfo mI = null;
 	Type t1 = n.e.accept(this); //determine type of caller
 
+	if(t1 == null)
+	    return null;
+
 	if(!(t1 instanceof IdentifierType))
-	    errorMsg.error(n.e.pos, t1.toString() + "cannot be dereferenced"); // caller must be a class type
+	    errorMsg.error(n.e.pos, t1.toString() + " cannot be dereferenced"); // caller must be a class type
 	else
 	{
 	    ClassInfo callingClass = classTable.get(t1.toString());
 	    if(callingClass != null)
 	    {
+		n.fullname = callingClass.getName() + "$" + method;
 		//build type list for called method
 		StringBuilder sb = new StringBuilder("(");
 		for(int i = 0; i < n.el.size(); i++)
@@ -280,6 +284,7 @@ public class TypeCheckVisitor extends visitor.TypeDepthFirstVisitor
 						       method + sb.toString(),	method + mI.getFormalsTypes()));
 		}
 	    }
+
 	}
 	if(mI == null)
 	    return null;

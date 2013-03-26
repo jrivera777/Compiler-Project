@@ -10,21 +10,12 @@ class Remix
     int x;
     public boolean WhereThePartyAt(int y)
     {
-	int x;
 
-	missing = false;
-	arr[false] = remix;
-	x = d;
-	if(new Remix().Dale() < 10)
-	{
-	    x = 10;
-	}
-	else
-	{
-	    x = 0 - 1;
-	    x = x + 1;
-	}
-	return x < 0;
+	Foo f;
+
+	System.out.println(y.test());
+	f = b.fuck();
+	return y < 0;
     }
 
     public int Dale()
