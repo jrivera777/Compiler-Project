@@ -2,8 +2,8 @@ package semant;
 
 import syntaxtree.*;
 
-public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
-
+public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
+{
     private SymbolTable  classTable;
     private frame.Frame  currFrame;
     private ClassInfo    currClass;
@@ -28,7 +28,8 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
 	// Reverse frags and return it.
 	Frag old = frags;
 	frags = null;
-	while (old != null) {
+	while (old != null)
+	{
 	    Frag temp = old.next;
 	    old.next = frags;
 	    frags = old;
@@ -86,20 +87,11 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
     public semant.Exp visit(MethodDecl n)
     {
 	currMethod = currClass.getMethod(n.i);
-	VariableInfo
-	currMethod.addFormal(currClass.getName(),
-//	currFrame = currFrame.newFrame(
-	for ( int i = 0; i < n.fl.size(); i++ )
-	{
-	    n.fl.elementAt(i).accept(this);
-	}
+
+	currFrame.newFrame(new temp.Label(n.i), generateFalseBL(fl.size() + 1));
 	for ( int i = 0; i < n.vl.size(); i++ )
 	{
 	    n.vl.elementAt(i).accept(this);
-	}
-	for ( int i = 0; i < n.sl.size(); i++ )
-	{
-	    n.sl.elementAt(i).accept(this);
 	}
 	n.e.accept(this);
 	return null;
@@ -164,7 +156,7 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
     {
 	return new Ex(new tree.CONST(n.i));
     }
-
+cond
     public semant.Exp visit(True n)
     {
 	return new Ex(new tree.CONST(1));
@@ -178,7 +170,8 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
     // Now we have some auxiliary functions:
 
     // Create a fragment for a function and add it to the front of frags.
-    private void procEntryExit(Exp body, frame.Frame funcFrame) {
+    private void procEntryExit(Exp body, frame.Frame funcFrame)
+    {
 	Frag func = new ProcFrag(funcFrame.procEntryExit1(body.unNx()), funcFrame);
 	func.next = frags;
 	frags = func;
@@ -186,11 +179,13 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
 
     // plus and mul are useful abbreviations that could do simple optimizations.
 
-    private tree.Exp plus(tree.Exp e1, tree.Exp e2) {
+    private tree.Exp plus(tree.Exp e1, tree.Exp e2)
+    {
 	return new tree.BINOP(tree.BINOP.PLUS, e1, e2);
     }
 
-    private tree.Exp mul(tree.Exp e1, tree.Exp e2) {
+    private tree.Exp mul(tree.Exp e1, tree.Exp e2)
+    {
 	return new tree.BINOP(tree.BINOP.MUL, e1, e2);
     }
 
@@ -199,11 +194,11 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
     class InHeap extends frame.Access
     {
 	int offset;
-
 	InHeap(int o) {offset=o;}
 
 	// Here the base pointer will be the "this" pointer to the object.
-	public tree.Exp exp(tree.Exp basePtr) {
+	public tree.Exp exp(tree.Exp basePtr)
+	{
 	    return new tree.MEM(plus(basePtr, new tree.CONST(offset)));
 	}
     }
@@ -213,7 +208,8 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
     // They let us hold off on generating tree code for a phrase until
     // we see the *context* in which it is used.
 
-    class Ex extends Exp { 			// page 141
+    class Ex extends Exp
+    { 			// page 141
 	tree.Exp exp;
 	Ex(tree.Exp e) {exp=e;}
 
@@ -221,12 +217,14 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
 
 	tree.Stm unNx() {return new tree.EXPR(exp);}
 
-	tree.Stm unCx(temp.Label t, temp.Label f) {
+	tree.Stm unCx(temp.Label t, temp.Label f)
+	{
 	    return new tree.CJUMP(tree.CJUMP.NE, exp, new tree.CONST(0), t, f);
 	}
     }
 
-    class Nx extends Exp { 			// page 141
+    class Nx extends Exp
+    { 			// page 141
 	tree.Stm stm;
 	Nx(tree.Stm s) {stm=s;}
 
@@ -239,8 +237,10 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
 	}
     }
 
-    abstract class Cx extends Exp {  		// page 142
-	tree.Exp unEx() {
+    abstract class Cx extends Exp
+    {  		// page 142
+	tree.Exp unEx()
+	{
 	    temp.Temp r = new temp.Temp();
 	    temp.Label t = new temp.Label();
 	    temp.Label f = new temp.Label();
@@ -258,7 +258,13 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
 
 	tree.Stm unNx()
 	{
-
+	    if(exp instanceof tree.CONST)
+	    {
+		if(((tree.CONST)exp).value == 0)
+		    return new tree.JUMP(f);
+		return new tree.JUMP(t);
+	    }
+	    return this.unCx(t,f);
 	}
     }
 
@@ -275,7 +281,8 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
     }
 
     class IfThenElseExp extends Exp
-    {     	// page 150
+    {
+	// page 150
 	Exp cond, a, b;
 	temp.Label t = new temp.Label();
 	temp.Label f = new temp.Label();
@@ -287,25 +294,44 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor {
 	    temp.Temp r = new temp.Temp();
 	    return new tree.ESEQ(
 		new tree.SEQ(cond.unCx(t,f),
-			     new tree.SEQ(new tree.LABEL(t),
-					  new tree.SEQ(new tree.MOVE(new tree.TEMP(r), a.unEx()),
-						       new tree.SEQ(new tree.JUMP(new tree.LABEL(join)),
-								    new tree.SEQ(new tree.LABEL(f),
-										 new tree.SEQ(new tree.MOVE(new tree.TEMP(r), b.unEx()),
-											      new tree.LABEL(join))))))),
+			     new tree.SEQ(
+				 new tree.LABEL(t),
+				 new tree.SEQ(
+				     new tree.MOVE(new tree.TEMP(r), a.unEx()),
+				     new tree.SEQ(
+					 new tree.JUMP(new tree.LABEL(join)),
+					 new tree.SEQ(
+					     new tree.LABEL(f),
+					     new tree.SEQ(
+						 new tree.MOVE(new tree.TEMP(r), b.unEx()),
+						 new tree.LABEL(join))))))),
 		new tree.TEMP(r));
 	}
 
 	tree.Stm unNx()
 	{
+	    return new tree.SEQ(cond.unCx(t,f),
+				new tree.SEQ(
+				    new tree.LABEL(t),
+				    new tree.SEQ(
+					a.unNx(),
+					new tree.SEQ(
+					    new tree.JUMP(new tree.LABEL(join)),
+					    new tree.SEQ(
+						new tree.LABEL(f),
+						new tree.SEQ(b.unNx(), new tree.LABEL(join)))))));
 
 	}
 
 	tree.Stm unCx(temp.Label tt, temp.Label ff)
 	{
-	    // temp.Label z = new temp.Label();
-	    // return new tree.SEQ(a.unCx(z,f),
-	    // 			new SEQ(
+	    return new tree.SEQ(cond.unCx(t,f),
+				new tree.SEQ(
+				    new tree.LABEL(t),
+				    new tree.SEQ(a.unCx(tt,ff),
+						 new tree.SEQ(
+						     new tree.LABEL(f),
+						     b.unCx(tt,ff)))));
 	}
     }
 
