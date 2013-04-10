@@ -65,7 +65,6 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	int offset = 0;
 
 	currClass = classTable.get(n.i);
-
 	for ( int i = 0; i < n.vl.size(); i++ )
 	{
 	    varInfo = currClass.getField(n.vl.getElement(i).i);
@@ -87,34 +86,40 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
     public semant.Exp visit(MethodDecl n)
     {
 	currMethod = currClass.getMethod(n.i);
+	currFrame = currFrame.newFrame(new temp.Label(n.i), generateFalseBL(fl.size() + 1));
 
-	currFrame.newFrame(new temp.Label(n.i), generateFalseBL(fl.size() + 1));
-	for ( int i = 0; i < n.vl.size(); i++ )
+	AccessList formals = currFrame.formals.tail;
+	while(formals.tail != null)
 	{
-	    n.vl.elementAt(i).accept(this);
+	    formals.head = frame.allocLocal(false);
+	    head = head.tail;
 	}
-	n.e.accept(this);
+	for(int i = 0; i < n.vl.size(); i++)
+	    n.vl.elementAt(i).access = currframe.allocLocal(false);
+
+	semant.Exp bodySeq = buildSEQ(n.sl, 0);
+
+	tree.SEQ body = new tree.SEQ(bodySeq, new tree.MOVE(currFrame.RVCallee(),e.accept(this)));
+
+	procEntryExit(body, currFrame);
 	return null;
     }
 
     // StatementList sl;
     public semant.Exp visit(Block n)
     {
-	for ( int i = 0; i < n.sl.size(); i++ )
-	{
-	    semant.Exp currStm = n.sl.elementAt(i).accept(this);
-	    procEntryExit(currStm, currFrame);
-	}
-	return new Nx(n);
+	tree.Exp = BuildSEQ(n.sl, 0);
+	procEntryExit(currStm, currFrame);
+	return null;
     }
 
     // Exp e;
     // Statement s1,s2;
     public semant.Exp visit(If n)
     {
-	n.e.accept(this);
-	n.s1.accept(this);
-	n.s2.accept(this);
+	IfThenElseExp ifte = new IfThenElseExp(n.e.accept(this), n.s1.accept(this), n.s2.accept(this));
+	tree.Stm brickSquad = ifte.unNx();
+	procEntryExit(brickSquad, currFrame);
 	return null;
     }
 
@@ -122,8 +127,9 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
     // Statement s;
     public semant.Exp visit(While n)
     {
-	n.e.accept(this);
-	n.s.accept(this);
+	temp.Label lbl = new temp.Label();
+	new tree.SEQ(new tree.LABEL(lbl)
+	IfThenElseExp ifte = new IfThenElseExp(n.e.accept(this)
 	return null;
     }
 
@@ -156,7 +162,7 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
     {
 	return new Ex(new tree.CONST(n.i));
     }
-cond
+
     public semant.Exp visit(True n)
     {
 	return new Ex(new tree.CONST(1));
@@ -224,7 +230,8 @@ cond
     }
 
     class Nx extends Exp
-    { 			// page 141
+    {
+	// page 141
 	tree.Stm stm;
 	Nx(tree.Stm s) {stm=s;}
 
@@ -238,7 +245,8 @@ cond
     }
 
     abstract class Cx extends Exp
-    {  		// page 142
+    {
+	// page 142
 	tree.Exp unEx()
 	{
 	    temp.Temp r = new temp.Temp();
@@ -335,6 +343,7 @@ cond
 	}
     }
 
+    //Auxiliary auxiliary functions
     public util.BoolList generateFalseBL(int size)
     {
 	util.BoolList blist = new util.BoolList(false, null);
@@ -342,5 +351,14 @@ cond
 	    blist.tail = new util.BoolList(false, null);
 
 	return blist;
+    }
+
+    public semant.Exp buildSEQ(StatementList sl, int pos)
+    {
+	if(pos == sl.size())
+	    return sl.elementAt(pos).accept(this);
+
+	semant.Exp exp= sl.elementAt(pos).accept(this);
+	return new tree.SEQ(exp, buildSEQ(s, pos+1));
     }
 }
