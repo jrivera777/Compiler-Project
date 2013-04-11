@@ -44,20 +44,12 @@ class MethodInfo {
 	    return false;
 	locals.put(id, vi);
 	return true;
-   }
-
-    public VariableInfo getVar(String id) {
-	return (VariableInfo) locals.get(id);i) {
-	if (locals.containsKey(id))
-	    return false;
-	locals.put(id, vi);
-	return true;
-   }
+    }
 
     public VariableInfo getVar(String id) {
 	return (VariableInfo) locals.get(id);
     }
 
-    }
-
 }
+
+

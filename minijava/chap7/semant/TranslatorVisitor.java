@@ -11,7 +11,7 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
     private tree.Exp     currThis;
     private Frag         frags;		// Linked list of accumlated fragments.
     private boolean      optimize;	// Do we want to optimize?
-
+    tree.Print printer = new tree.Print(System.out);
     public TranslatorVisitor(SymbolTable t, frame.Frame f, boolean optim)
     {
 	classTable = t;
@@ -64,10 +64,11 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	int wSize = currFrame.wordSize();
 	int offset = 0;
 
-	currClass = classTable.get(n.i);
+	currClass = classTable.get(n.i.s);
 	for ( int i = 0; i < n.vl.size(); i++ )
 	{
-	    varInfo = currClass.getField(n.vl.getElement(i).i);
+	    varInfo = currClass.getField(n.vl.elementAt(i).i.s);
+	    System.out.println("Creating Access for field '" +  n.vl.elementAt(i).i.s + "' with offset " + offset);
 	    varInfo.access = new InHeap(offset);
 	    offset += wSize;
 	}
@@ -85,78 +86,158 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
     // Exp e;
     public semant.Exp visit(MethodDecl n)
     {
-	currMethod = currClass.getMethod(n.i);
-	currFrame = currFrame.newFrame(new temp.Label(n.i), generateFalseBL(fl.size() + 1));
+	currMethod = currClass.getMethod(n.i.s);
+	currFrame = currFrame.newFrame(new temp.Label(n.i.s), generateFalseBL(n.fl.size() + 1));
 
-	AccessList formals = currFrame.formals.tail;
+	frame.AccessList formals = currFrame.formals.tail;
 	while(formals.tail != null)
 	{
-	    formals.head = frame.allocLocal(false);
-	    head = head.tail;
+	    formals.head = currFrame.allocLocal(false);
+	    formals = formals.tail;
 	}
 	for(int i = 0; i < n.vl.size(); i++)
-	    n.vl.elementAt(i).access = currframe.allocLocal(false);
-
-	semant.Exp bodySeq = buildSEQ(n.sl, 0);
-
-	tree.SEQ body = new tree.SEQ(bodySeq, new tree.MOVE(currFrame.RVCallee(),e.accept(this)));
-
-	procEntryExit(body, currFrame);
+	{
+	    VariableInfo vInfo = currMethod.getVar(n.vl.elementAt(i).i.s);
+	    vInfo.access = currFrame.allocLocal(false);
+	}
+	tree.Stm bodySeq = buildSEQ(n.sl, 0);
+	bodySeq = new tree.SEQ(bodySeq, new tree.MOVE(new tree.TEMP(currFrame.RVCallee()),n.e.accept(this).unEx()));
+	procEntryExit(new Nx(bodySeq), currFrame);
 	return null;
     }
 
     // StatementList sl;
     public semant.Exp visit(Block n)
     {
-	tree.Exp = BuildSEQ(n.sl, 0);
-	procEntryExit(currStm, currFrame);
+	tree.Stm currStm = buildSEQ(n.sl, 0);
+	procEntryExit(new Nx(currStm), currFrame);
 	return null;
     }
 
-    // Exp e;
+//     Exp e;
     // Statement s1,s2;
     public semant.Exp visit(If n)
     {
 	IfThenElseExp ifte = new IfThenElseExp(n.e.accept(this), n.s1.accept(this), n.s2.accept(this));
 	tree.Stm brickSquad = ifte.unNx();
-	procEntryExit(brickSquad, currFrame);
+	procEntryExit(new Nx(brickSquad), currFrame);
 	return null;
-    }
+   }
 
-    // Exp e;
-    // Statement s;
-    public semant.Exp visit(While n)
-    {
-	temp.Label lbl = new temp.Label();
-	new tree.SEQ(new tree.LABEL(lbl)
-	IfThenElseExp ifte = new IfThenElseExp(n.e.accept(this)
-	return null;
-    }
+//     // Exp e;
+//     // Statement s;
+//     public semant.Exp visit(While n)
+//     {
+// 	temp.Label lbl = new temp.Label();
+// //	new tree.SEQ(new tree.LABEL(lbl)
+// //		     IfThenElseExp ifte = new IfThenElseExp(n.e.accept(this)
+// 	return null;
+//     }
 
     // Exp e;
     public semant.Exp visit(Print n)
     {
-	n.e.accept(this);
-	return null;
+
+	System.out.println("Visiting Print Statement");
+	semant.Exp se = n.e.accept(this);
+	System.out.println("Accepted!!");
+	if(se == null)
+	    System.out.println("BROKEN");
+	tree.Exp e = se.unEx();
+	System.out.println("About to print");
+	printer.prExp(e);
+	tree.ExpList eList = new tree.ExpList(e, null);
+	tree.Exp prnt = currFrame.externalCall("printInt", eList);
+
+	return new Ex(prnt);
     }
 
-    // Identifier i;
-    // Exp e;
-    public semant.Exp visit(Assign n)
-    {
-	n.i.accept(this);
-	n.e.accept(this);
-	return null;
-    }
+//     // Identifier i;
+//     // Exp e;
+//     public semant.Exp visit(Assign n)
+//     {
+// 	n.i.accept(this);
+// 	n.e.accept(this);
+// 	return null;
+//     }
 
-    // Identifier i;
+//     // Identifier i;
+//     // Exp e1,e2;
+//     public semant.Exp visit(ArrayAssign n) {
+// 	n.i.accept(this);
+// 	n.e1.accept(this);
+// 	n.e2.accept(this);
+// 	return null;
+//     }
+
+//     // Exp e1,e2;
+//     public semant.Exp visit(And n)
+//     {
+// 	n.e1.accept(this);
+// 	n.e2.accept(this);
+// 	return null;
+//     }
+
+//     // Exp e1,e2;
+//     public semant.Exp visit(LessThan n)
+//     {
+// 	n.e1.accept(this);
+// 	n.e2.accept(this);
+// 	return null;
+//     }
+
+//     // Exp e1,e2;
+//     public semant.Exp visit(Plus n)
+//     {
+// 	tree.Exp i1 = ((Ex)n.e1.accept(this)).unEx();
+// 	tree.Exp i2 = ((Ex)n.e2.accept(this)).unEx();
+// 	return new Ex(plus(i1, i2, true));
+//     }
+
+//     // Exp e1,e2;
+//     public semant.Exp visit(Minus n)
+//     {
+// 	tree.Exp i1 = ((Ex)n.e1.accept(this)).unEx();
+// 	tree.Exp i2 = ((Ex)n.e2.accept(this)).unEx();
+// 	return new Ex(plus(i1, i2, false));
+//     }
+
+//     // Exp e1,e2;
+//     public semant.Exp visit(Times n)
+//     {
+// 	tree.Exp i1 = ((Ex)n.e1.accept(this)).unEx();
+// 	tree.Exp i2 = ((Ex)n.e2.accept(this)).unEx();
+// 	return new Ex(mul(i1, i2));
+//     }
+
     // Exp e1,e2;
-    public semant.Exp visit(ArrayAssign n) {
-	n.i.accept(this);
+    public semant.Exp visit(ArrayLookup n)
+    {
 	n.e1.accept(this);
 	n.e2.accept(this);
 	return null;
     }
+
+//     // Exp e;
+//     public semant.Exp visit(ArrayLength n)
+//     {
+// 	n.e.accept(this);
+// 	return null;
+//     }
+
+//     // Exp e;
+//     // Identifier i;
+//     // ExpList el;
+//     public semant.Exp visit(Call n)
+//     {
+// 	n.e.accept(this);
+// 	n.i.accept(this);
+// 	for ( int i = 0; i < n.el.size(); i++ ) {
+// 	    n.el.elementAt(i).accept(this);
+// 	}
+// 	return null;
+//     }
+
     // int i;
     public semant.Exp visit(IntegerLiteral n)
     {
@@ -173,6 +254,61 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	return new Ex(new tree.CONST(0));
     }
 
+//     // String s;
+//     public semant.Exp visit(IdentifierExp n)
+//     {
+// 	return null;
+//     }
+
+//     public semant.Exp visit(This n)
+//     {
+// 	return null;
+//     }
+
+//     // Exp e;
+//     public semant.Exp visit(NewArray n)
+//     {
+// 	n.e.accept(this);
+// 	return null;
+//     }
+
+    //Identifier i;
+    public semant.Exp visit(NewObject n)
+    {
+	System.out.println("Creating Class of type <" + n.i.s + ">");
+	int numFields = classTable.get(n.i.s).getFieldsCount();
+	System.out.printf("Visiting NewObject: %d fields to intialize\n", numFields);
+	tree.ExpList params = new tree.ExpList(new tree.CONST(numFields),
+					       new tree.ExpList(new tree.CONST(currFrame.wordSize()), null));
+	System.out.println("Created parameters");
+	tree.Exp obj = currFrame.externalCall("calloc", params);
+	printer.prExp(obj);
+	return new Ex(obj);
+    }
+
+//     // Exp e;
+//     public semant.Exp visit(Not n)
+//     {
+// 	n.e.accept(this);
+// 	return null;
+//     }
+
+//     // String s;
+//     public semant.Exp visit(Identifier n)
+//     {
+// 	VariableInfo v = null;
+// 	if(currMethod != null)
+// 	{
+// 	    v = currMethod.getVar(n.s);
+// 	    if(v != null)
+// 		return new Ex(v.access.exp(new tree.TEMP(currFrame.FP())));
+// 	}
+
+// 	v = currClass.getField(n.s);
+// 	return new Ex(v.access.exp(currThis));
+//     }
+
+
     // Now we have some auxiliary functions:
 
     // Create a fragment for a function and add it to the front of frags.
@@ -185,13 +321,30 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 
     // plus and mul are useful abbreviations that could do simple optimizations.
 
-    private tree.Exp plus(tree.Exp e1, tree.Exp e2)
+    private tree.Exp plus(tree.Exp e1, tree.Exp e2, boolean plus)
     {
+	if(e1 instanceof tree.CONST && e2 instanceof tree.CONST)
+	{
+	    tree.CONST c1 = (tree.CONST)e1;
+	    tree.CONST c2 = (tree.CONST)e2;
+	    if(!plus)
+		return new tree.CONST(c1.value - c2.value);
+	    return new tree.CONST(c1.value + c2.value);
+	}
+
+	if(!plus)
+	    return new tree.BINOP(tree.BINOP.MINUS, e1, e2);
 	return new tree.BINOP(tree.BINOP.PLUS, e1, e2);
     }
 
     private tree.Exp mul(tree.Exp e1, tree.Exp e2)
     {
+	if(e1 instanceof tree.CONST && e2 instanceof tree.CONST)
+	{
+	    tree.CONST c1 = (tree.CONST)e1;
+	    tree.CONST c2 = (tree.CONST)e2;
+	    return new tree.CONST(c1.value + c2.value);
+	}
 	return new tree.BINOP(tree.BINOP.MUL, e1, e2);
     }
 
@@ -205,7 +358,7 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	// Here the base pointer will be the "this" pointer to the object.
 	public tree.Exp exp(tree.Exp basePtr)
 	{
-	    return new tree.MEM(plus(basePtr, new tree.CONST(offset)));
+	    return new tree.MEM(plus(basePtr, new tree.CONST(offset), true));
 	}
     }
 
@@ -266,13 +419,14 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 
 	tree.Stm unNx()
 	{
-	    if(exp instanceof tree.CONST)
-	    {
-		if(((tree.CONST)exp).value == 0)
-		    return new tree.JUMP(f);
-		return new tree.JUMP(t);
-	    }
-	    return this.unCx(t,f);
+	    // if(exp instanceof tree.CONST)
+	    // {
+	    // 	if(((tree.CONST)exp).value == 0)
+	    // 	    return new tree.JUMP(f);
+	    // 	return new tree.JUMP(t);
+	    // }
+	    // return this.unCx(t,f);
+	    return null;
 	}
     }
 
@@ -307,7 +461,7 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 				 new tree.SEQ(
 				     new tree.MOVE(new tree.TEMP(r), a.unEx()),
 				     new tree.SEQ(
-					 new tree.JUMP(new tree.LABEL(join)),
+					 new tree.JUMP(join),
 					 new tree.SEQ(
 					     new tree.LABEL(f),
 					     new tree.SEQ(
@@ -324,7 +478,7 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 				    new tree.SEQ(
 					a.unNx(),
 					new tree.SEQ(
-					    new tree.JUMP(new tree.LABEL(join)),
+					    new tree.JUMP(join),
 					    new tree.SEQ(
 						new tree.LABEL(f),
 						new tree.SEQ(b.unNx(), new tree.LABEL(join)))))));
@@ -353,12 +507,12 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	return blist;
     }
 
-    public semant.Exp buildSEQ(StatementList sl, int pos)
+    public tree.Stm buildSEQ(StatementList sl, int pos)
     {
 	if(pos == sl.size())
-	    return sl.elementAt(pos).accept(this);
+	    return sl.elementAt(pos).accept(this).unNx();
 
-	semant.Exp exp= sl.elementAt(pos).accept(this);
-	return new tree.SEQ(exp, buildSEQ(s, pos+1));
+	tree.Stm exp = sl.elementAt(pos).accept(this).unNx();
+	return new tree.SEQ(exp, buildSEQ(sl, pos+1));
     }
 }
