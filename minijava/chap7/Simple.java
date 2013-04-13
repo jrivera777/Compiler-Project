@@ -11,10 +11,9 @@ class C {
 
     public int[] foo(int i)
     {
-	arr = new int[5];
-	i = arr.length;
+	arr = new int[5]; //return CALL object? Or MEM of the CALL object?
 //	b = true && true && true; //seems broken
-	arr[1] = 42;
+	arr[1] = i * 4;
 
 	return arr;
     }

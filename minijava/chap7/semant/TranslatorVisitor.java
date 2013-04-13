@@ -46,7 +46,6 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	String id = n.i1.toString();
 
 	currClass = classTable.get(id);
-
 	currFrame = currFrame.newFrame(new temp.Label("main"), null);
 
 	semant.Exp body = n.s.accept(this);
@@ -64,7 +63,7 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	int wSize = currFrame.wordSize();
 	int offset = 0;
 
-currClass = classTable.get(n.i.s);
+	currClass = classTable.get(n.i.s);
 	for ( int i = 0; i < n.vl.size(); i++ )
 	{
 	    varInfo = currClass.getField(n.vl.elementAt(i).i.s);
@@ -123,16 +122,14 @@ currClass = classTable.get(n.i.s);
     public semant.Exp visit(Block n)
     {
 	tree.Stm currStm = buildSEQ(n.sl, 0);
-//	procEntryExit(new Nx(currStm), currFrame);
 	return new Nx(currStm);
     }
 
-//     Exp e;
+    //     Exp e;
     // Statement s1,s2;
     public semant.Exp visit(If n)
     {
 	IfThenElseExp ifte = new IfThenElseExp(n.e.accept(this), n.s1.accept(this), n.s2.accept(this));
-//	procEntryExit(new Nx(brickSquad), currFrame);
 	return new Nx(ifte.unNx());
     }
 
@@ -171,7 +168,12 @@ currClass = classTable.get(n.i.s);
     // Exp e1,e2;
     public semant.Exp visit(ArrayAssign n)
     {
-	tree.Stm wutang = new tree.MOVE(plus(n.i.accept(this).unEx(), n.e1.accept(this).unEx(), true), n.e2.accept(this).unEx());
+	tree.Exp arrAddr = n.i.accept(this).unEx(); //base address
+	tree.Exp offset = n.e1.accept(this).unEx();
+	offset = plus(offset, new tree.CONST(1), true); //compensate for length spot in array
+	tree.Exp loc = mul(new tree.CONST(currFrame.wordSize()), offset);
+
+	tree.Stm wutang = new tree.MOVE(plus(arrAddr, loc, true), n.e2.accept(this).unEx());
 	return new Nx(wutang);
     }
 
@@ -179,8 +181,8 @@ currClass = classTable.get(n.i.s);
     public semant.Exp visit(And n)
     {
 	IfThenElseExp and = new IfThenElseExp(n.e1.accept(this), n.e2.accept(this), new Ex(new tree.CONST(0)));
-	printer.debug("AND value from unEx():");
-	printer.prExp(and.unEx());
+	// printer.debug("AND value from unEx():");
+	// printer.prExp(and.unEx());
 	return and;
     }
 
@@ -188,9 +190,7 @@ currClass = classTable.get(n.i.s);
     public semant.Exp visit(LessThan n)
     {
 	tree.Exp l_value = n.e1.accept(this).unEx();
-//	printer.prExp(l_value);
 	tree.Exp r_value = n.e2.accept(this).unEx();
-//	printer.prExp(r_value);
 	return new RelCx(tree.CJUMP.LT, l_value, r_value);
     }
 
@@ -224,6 +224,7 @@ currClass = classTable.get(n.i.s);
 	tree.Exp arrAddr = n.e1.accept(this).unEx(); //base address
 	tree.Exp offset = n.e2.accept(this).unEx();
 	offset = plus(offset, new tree.CONST(1), true); //compensate for length spot in array
+
 	tree.Exp loc = mul(new tree.CONST(currFrame.wordSize()), offset);
 	return new Ex(new tree.MEM(plus(arrAddr, loc, true)));
     }
@@ -232,7 +233,7 @@ currClass = classTable.get(n.i.s);
     public semant.Exp visit(ArrayLength n)
     {
 	tree.Exp val = n.e.accept(this).unEx(); // first address is length of the array
-	return new Ex(new tree.MEM(val));
+	return new Ex(val);
     }
 
     // Exp e;
@@ -294,7 +295,7 @@ currClass = classTable.get(n.i.s);
 	tree.ExpList params = new tree.ExpList(new tree.CONST(len.value + 1),
 					       new tree.ExpList(new tree.CONST(currFrame.wordSize()), null));
 	tree.Exp arr = currFrame.externalCall("calloc", params);
-	tree.Exp mvlen = new tree.ESEQ(new tree.MOVE(arr, len), arr);
+	tree.Exp mvlen = new tree.ESEQ(new tree.MOVE(new tree.MEM(arr), len), arr);
 	return new Ex(mvlen);
     }
 
