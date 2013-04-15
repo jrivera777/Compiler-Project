@@ -111,11 +111,11 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	if(bodySeq == null)
 	    bodySeq = new tree.MOVE(new tree.TEMP(currFrame.RVCallee()),n.e.accept(this).unEx());
 	else
-	   bodySeq = new tree.SEQ(bodySeq, new tree.MOVE(new tree.TEMP(currFrame.RVCallee()),n.e.accept(this).unEx()));
+	    bodySeq = new tree.SEQ(bodySeq, new tree.MOVE(new tree.TEMP(currFrame.RVCallee()),n.e.accept(this).unEx()));
 
-	Exp result = new Nx(bodySeq);
-	procEntryExit(result, currFrame);
-	return result;
+	Exp methodman = new Nx(bodySeq);
+	procEntryExit(methodman, currFrame);
+	return methodman;
     }
 
     // StatementList sl;
@@ -129,8 +129,10 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
     // Statement s1,s2;
     public semant.Exp visit(If n)
     {
+
 	IfThenElseExp ifte = new IfThenElseExp(n.e.accept(this), n.s1.accept(this), n.s2.accept(this));
-	return new Nx(ifte.unNx());
+	// return new Nx(ifte.unCx();
+	return ifte;
     }
 
     // Exp e;
@@ -138,11 +140,23 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
     public semant.Exp visit(While n)
     {
 	temp.Label test = new temp.Label();
+	temp.Label body = new temp.Label();
 	temp.Label done = new temp.Label();
-	IfThenElseExp ifte = new IfThenElseExp(n.e.accept(this), n.s.accept(this), new Ex(new tree.CONST(0)));
+	Exp bricksquad = n.e.accept(this);
+	Exp odb = n.s.accept(this);
+	tree.Stm bodyStm = odb.unNx();
+	if(bodyStm == null)
+	    return new Nx(new tree.SEQ(new tree.LABEL(test),
+				       new tree.SEQ(bricksquad.unCx(test, done),
+						    new tree.LABEL(done))));
+
+
 	return new Nx(new tree.SEQ(new tree.LABEL(test),
-				   new tree.SEQ(ifte.unCx(test, done),
-						new tree.LABEL(done))));
+			    new tree.SEQ(bricksquad.unCx(body, done),
+					 new tree.SEQ(new tree.LABEL(body),
+						      new tree.SEQ(bodyStm,
+								   new tree.SEQ(new tree.JUMP(test),
+										new tree.LABEL(done)))))));
     }
 
     // Exp e;
@@ -181,8 +195,6 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
     public semant.Exp visit(And n)
     {
 	IfThenElseExp and = new IfThenElseExp(n.e1.accept(this), n.e2.accept(this), new Ex(new tree.CONST(0)));
-	// printer.debug("AND value from unEx():");
-	// printer.prExp(and.unEx());
 	return and;
     }
 
@@ -294,8 +306,9 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	tree.CONST len = (tree.CONST)n.e.accept(this).unEx();
 	tree.ExpList params = new tree.ExpList(new tree.CONST(len.value + 1),
 					       new tree.ExpList(new tree.CONST(currFrame.wordSize()), null));
-	tree.Exp arr = currFrame.externalCall("calloc", params);
-	tree.Exp mvlen = new tree.ESEQ(new tree.MOVE(new tree.MEM(arr), len), arr);
+	temp.Temp t = new temp.Temp();
+	tree.Stm arr = new tree.MOVE(new tree.TEMP(t), new tree.MEM(currFrame.externalCall("calloc", params)));
+	tree.Exp mvlen = new tree.ESEQ(arr, new tree.TEMP(t));
 	return new Ex(mvlen);
     }
 
@@ -386,16 +399,23 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 		tree.CONST c2 = (tree.CONST)e2;
 		return new tree.CONST(c1.value * c2.value);
 	    }
-	    else if(e1 instanceof tree.CONST && ((tree.CONST)e1).value == 4)
+	    else if(e1 instanceof tree.CONST && ((tree.CONST)e1).value % 2 == 0)
 	    {
-		return new tree.BINOP(tree.BINOP.LSHIFT, e2, new tree.CONST(2));
+		int val = ((tree.CONST)e1).value;
+		return new tree.BINOP(tree.BINOP.LSHIFT, e2, new tree.CONST(log2(val)));
 	    }
-	    else if(e2 instanceof tree.CONST && ((tree.CONST)e2).value == 4)
+	    else if(e2 instanceof tree.CONST && ((tree.CONST)e2).value % 2 == 0)
 	    {
-		return new tree.BINOP(tree.BINOP.LSHIFT, e1, new tree.CONST(2));
+		int val = ((tree.CONST)e2).value;
+		return new tree.BINOP(tree.BINOP.LSHIFT, e1, new tree.CONST(log2(val)));
 	    }
 	}
 	return new tree.BINOP(tree.BINOP.MUL, e1, e2);
+    }
+
+    private int log2(int n)
+    {
+	return (int)(Math.log10(n) / Math.log10(2));
     }
 
     // Finally, we have several nested auxiliary classes:
@@ -434,7 +454,13 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	{
 	    if(optimize)
 	    {
-
+		if(exp instanceof tree.CONST)
+		{
+		    if(((tree.CONST)exp).value == 0)
+			return new tree.JUMP(f);
+		    return new tree.JUMP(t);
+		}
+		return this.unCx(t,f);
 	    }
 	    return new tree.CJUMP(tree.CJUMP.NE, exp, new tree.CONST(0), t, f);
 	}
@@ -479,13 +505,6 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	{
 	    temp.Label t = new temp.Label();
 	    temp.Label f = new temp.Label();
-	    // if(exp instanceof tree.CONST)
-	    // {
-	    // 	if(((tree.CONST)exp).value == 0)
-	    // 	    return new tree.JUMP(f);
-	    // 	return new tree.JUMP(t);
-	    // }
-	    // return this.unCx(t,f);
 	    return this.unCx(t, f);
 	}
     }
@@ -514,6 +533,7 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	tree.Exp unEx()
 	{
 	    temp.Temp r = new temp.Temp();
+
 	    return new tree.ESEQ(
 		new tree.SEQ(cond.unCx(t,f),
 			     new tree.SEQ(
@@ -547,18 +567,20 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 
 	tree.Stm unCx(temp.Label tt, temp.Label ff)
 	{
-	    temp.Label t = new temp.Label();
-	    temp.Label f = new temp.Label();
-	    return new tree.SEQ(cond.unCx(t,f),
-				new tree.SEQ(new tree.LABEL(t),
-					     new tree.SEQ(a.unNx(),
-							  new tree.SEQ(new tree.JUMP(tt),
-								       new tree.SEQ(new tree.LABEL(f),
-										    b.unNx())))));
+
+	    return new tree.SEQ(cond.unCx(t,ff),
+	    			new tree.SEQ(new tree.LABEL(t),
+	    				     new tree.SEQ(a.unCx(tt, ff),
+	    						  new tree.SEQ(new tree.JUMP(tt),
+	    							       new tree.SEQ(new tree.LABEL(f),
+	    									    b.unNx())))));
 	}
     }
 
     //Auxiliary auxiliary functions
+
+    //generates BoolList of given size for use in call to newFrame
+    //for now, defaults all values as false
     public util.BoolList generateFalseBL(int size)
     {
 	util.BoolList blist = new util.BoolList(false, null);
@@ -568,6 +590,7 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	return blist;
     }
 
+    //builds multi-SEQ structure from given syntaxtree.StatementList
     public tree.Stm buildSEQ(StatementList sl, int pos)
     {
 	if(sl.size() <= 0)

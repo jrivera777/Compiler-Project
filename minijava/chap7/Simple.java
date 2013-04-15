@@ -11,11 +11,13 @@ class C {
 
     public int[] foo(int i)
     {
-	arr = new int[5]; //return CALL object? Or MEM of the CALL object?
-//	b = true && true && true; //seems broken
-	arr[1] = i * 4;
-
+	i = i * 16;
 	return arr;
+    }
+
+    public int bar(C x) {
+	i = x.bar(this);
+	return i;
     }
 }
 
