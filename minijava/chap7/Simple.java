@@ -10,6 +10,12 @@ class Fac
 {
     public int simple(int i)
     {
-	return i + 10;
+	int val;
+	if(true && true && false)
+	    val = 100;
+	else
+	    val = 666;
+
+	return 0;
     }
 }

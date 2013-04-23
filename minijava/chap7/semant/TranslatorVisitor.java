@@ -581,16 +581,13 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 
 	tree.Stm unCx(temp.Label tt, temp.Label ff)
 	{
-
 	    return new tree.SEQ(
-		cond.unCx(t,ff),
+		cond.unCx(t,f),
 		new tree.SEQ(
 		    new tree.LABEL(t),
 		    new tree.SEQ(
 			a.unCx(tt, ff),
-			new tree.SEQ(
-			    new tree.JUMP(tt),
-			    new tree.SEQ(new tree.LABEL(f), b.unNx())))));
+			new tree.SEQ(new tree.LABEL(f), b.unCx(tt, ff)))));
 	}
     }
 
@@ -614,7 +611,7 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
     public tree.Stm buildSEQ(StatementList sl, int pos)
     {
 	if(sl.size() <= 0)
-	    return null;
+	    return new tree.EXPR(new tree.CONST(0));
 	if(pos == sl.size()-1)
 	    return sl.elementAt(pos).accept(this).unNx();
 

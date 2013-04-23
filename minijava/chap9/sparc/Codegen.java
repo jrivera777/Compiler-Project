@@ -83,9 +83,23 @@ public class Codegen {
 	    else
 	    {
 		eOPER("\tsethi\t%hi(" + left.value  +"), `d0\n", L(transient1, null), null);
-		eOPER("\tor\t`s0, %lo(" + left.value + "), `d0", L(transient1, null), L(transient1, null));
-		eOPER("\tcmp\t`s0, `s1\n", null, L(transient1, L(munchExp(s.right, null), null))); //use transients?
+		eOPER("\tor\t`s0, %lo(" + left.value + "), `d0\n", L(transient1, null), L(transient1, null));
+		eOPER("\tcmp\t`s1, `s0\n", null, L(transient1, L(munchExp(s.right, null), null))); //use transients?
 	    }
+
+	    //jump based on flags
+	    switch(s.relop)
+	    {
+		case tree.CJUMP.EQ: eOPER("\tbe\t`j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+		case tree.CJUMP.NE:eOPER("\tbne\t`j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+		case tree.CJUMP.LT:eOPER("\tbg\t`j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+		case tree.CJUMP.GT:eOPER("\tbl\t`j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+		case tree.CJUMP.LE:eOPER("\tbge\t`j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+		case tree.CJUMP.GE: eOPER("\tble`j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+		default:throw new Error("Bad RELOP.");
+	    }
+	    eOPER("\tnop\n", null, null);
+	    return;
 	}
 	else if(s.right instanceof tree.CONST)
 	{
@@ -95,7 +109,7 @@ public class Codegen {
 	    else
 	    {
 		eOPER("\tsethi\t%hi(" + right.value  +"), `d0\n", L(transient1, null), null);
-		eOPER("\tor\t`s0, %lo(" + right.value + "), `d0", L(transient1, null), L(transient1, null));
+		eOPER("\tor\t`s0, %lo(" + right.value + "), `d0\n", L(transient1, null), L(transient1, null));
 		eOPER("\tcmp\t`s0, `s1\n", null, L(munchExp(s.left, null),L(transient1, null))); //use transients?
 	    }
 	}
@@ -105,12 +119,12 @@ public class Codegen {
 	//jump based on flags
 	switch(s.relop)
 	{
-	    case tree.CJUMP.EQ: eOPER("\tbe `j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
-	    case tree.CJUMP.NE:eOPER("\tbne `j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
-	    case tree.CJUMP.LT:eOPER("\tbl `j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
-	    case tree.CJUMP.GT:eOPER("\tbg `j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
-	    case tree.CJUMP.LE:eOPER("\tble `j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
-	    case tree.CJUMP.GE: eOPER("\tbge `j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+	    case tree.CJUMP.EQ: eOPER("\tbe\t`j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+	    case tree.CJUMP.NE:eOPER("\tbne\t`j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+	    case tree.CJUMP.LT:eOPER("\tbl\t`j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+	    case tree.CJUMP.GT:eOPER("\tbg\t`j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+	    case tree.CJUMP.LE:eOPER("\tble\t`j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+	    case tree.CJUMP.GE: eOPER("\tbge\t`j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
 	    default:throw new Error("Bad RELOP.");
 	}
 	eOPER("\tnop\n", null, null);
@@ -136,7 +150,7 @@ public class Codegen {
 		else
 		{
 		    eOPER("\tsethi\t%hi(" + src.value  +"), `d0\n", L(dst.temp, null), null);
-		    eOPER("\tor\t`s0, %lo(" + src.value + "), `d0", L(dst.temp, null), L(dst.temp, null));
+		    eOPER("\tor\t`s0, %lo(" + src.value + "), `d0\n", L(dst.temp, null), L(dst.temp, null));
 		}
 	    }
 	    else if(s.src instanceof tree.TEMP)
@@ -200,7 +214,7 @@ public class Codegen {
 	else
 	{
 	    eOPER("\tsethi\t%hi(" + c.value  +"), `d0\n", L(reg, null), null);
-	    eOPER("\tor\t`s0, %lo(" + c.value + "), `d0", L(reg, null), L(reg, null));
+	    eOPER("\tor\t`s0, %lo(" + c.value + "), `d0\n", L(reg, null), L(reg, null));
 	}
 	return reg;
     }
@@ -255,11 +269,11 @@ public class Codegen {
 	{
 	    tree.CONST left = ((tree.CONST)n.left);
 	    if(is13bitCONST(left))
-		eOPER(operation + left.value + ", `d0\n", L(reg, null), L(munchExp(n.right, null), null));
+		eOPER(operation + "`s0, " + left.value + ", `d0\n", L(reg, null), L(munchExp(n.right, null), null));
 	    else
 	    {
 		eOPER("\tsethi\t%hi(" + left.value  +"), `d0\n", L(transient1, null), null);
-		eOPER("\tor\t`s0, %lo(" + left.value + "), `d0", L(transient1, null), L(transient1, null));
+		eOPER("\tor\t`s0, %lo(" + left.value + "), `d0\n", L(transient1, null), L(transient1, null));
 		eOPER(operation + "`s0, `s1, `d0\n", L(reg, null), L(transient1, L(munchExp(n.right, null), null))); //use transients?
 	    }
 	}
@@ -271,7 +285,7 @@ public class Codegen {
 	    else
 	    {
 		eOPER("\tsethi\t%hi(" + right.value  +"), `d0\n", L(transient1, null), null);
-		eOPER("\tor\t`s0, %lo(" + right.value + "), `d0", L(transient1, null), L(transient1, null));
+		eOPER("\tor\t`s0, %lo(" + right.value + "), `d0\n", L(transient1, null), L(transient1, null));
 		eOPER(operation + "`s1, `s0, `d0\n", L(reg, null), L(transient1, L(munchExp(n.left, null), null))); //use transients?
 	    }
 	}
@@ -291,6 +305,7 @@ public class Codegen {
 
     temp.Temp munchExp(tree.CALL n, temp.Temp r)
     {
+//	System.out.println("Entering Call");
 	temp.Temp reg;
 	reg = (r == null) ? frame.outgoingArgs[0] : r;
 
@@ -299,8 +314,16 @@ public class Codegen {
 	tree.ExpList args = n.args;
 	while(args != null)
 	{
+	    //   System.out.println("Arg: " + args.head.toString());
 	    if( argCount <= 5)
-		munchExp(args.head, frame.outgoingArgs[argCount++]);
+	    {
+		if(args.head instanceof tree.TEMP)
+		{
+		    eOPER("\tmov\t`s0, `d0\n", L(frame.outgoingArgs[argCount++], null), L(((tree.TEMP)args.head).temp, null));
+		}
+		else
+		    munchExp(args.head, frame.outgoingArgs[argCount++]);
+	    }
 	    else
 	    {
 	    	eOPER("\tst\t`s0, [%sp +" + spCount + "]", null, L(munchExp(args.head, transient3),null));
