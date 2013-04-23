@@ -90,14 +90,11 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 
 	int cnt = 0;
 	frame.AccessList curr = currFrame.formals.tail;
-	if(curr != null)
+	while(curr != null) //allocate space for formals
 	{
-	    while(curr != null) //allocate space for formals
-	    {
-		VariableInfo vInfo = currMethod.getVar(n.fl.elementAt(cnt++).i.s);
-		vInfo.access = curr.head;
-		curr = curr.tail;
-	    }
+	    VariableInfo vInfo = currMethod.getVar(n.fl.elementAt(cnt++).i.s);
+	    vInfo.access = curr.head;
+	    curr = curr.tail;
 	}
 
 	currThis = currFrame.formals.head.exp(new tree.TEMP(currFrame.FP())); //set up currThis for future references
@@ -184,7 +181,7 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	offset = plus(offset, new tree.CONST(1), true); //compensate for length spot in array
 
 	tree.Exp loc = mul(new tree.CONST(currFrame.wordSize()), offset);
-	tree.Stm wutang = new tree.MOVE(plus(arrAddr, loc, true), n.e2.accept(this).unEx());
+	tree.Stm wutang = new tree.MOVE(new tree.MEM(plus(arrAddr, loc, true)), n.e2.accept(this).unEx());
 
 	return new Nx(wutang);
     }
@@ -282,8 +279,11 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	{
 	    v = currMethod.getVar(n.s);
 	    if(v != null)
+	    {
+		if(v.access == null)
+		    System.out.println(v.type.toString() + " IS NULL INSIDE " + currMethod.getName());
 		return new Ex(v.access.exp(new tree.TEMP(currFrame.FP())));
-
+	    }
 	    //wasn't local variable, must be a field
 	    v = currClass.getField(n.s);
 	    return new Ex(v.access.exp(currThis));
@@ -301,9 +301,17 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
     // Exp e;
     public semant.Exp visit(NewArray n)
     {
-	tree.CONST len = (tree.CONST)n.e.accept(this).unEx();
-	tree.ExpList params = new tree.ExpList(new tree.CONST(len.value + 1),
+	tree.Exp at = n.e.accept(this).unEx();
+	tree.ExpList params = null;
+	if(at instanceof tree.CONST)
+	{
+	    tree.CONST len = (tree.CONST)at;
+	    params = new tree.ExpList(new tree.CONST(len.value + 1),
 					       new tree.ExpList(new tree.CONST(currFrame.wordSize()), null));
+	}
+	else
+	    params = new tree.ExpList(plus(at, new tree.CONST(1), true),
+				      new tree.ExpList(new tree.CONST(currFrame.wordSize()), null));
 	temp.Temp t = new temp.Temp();
 	tree.Stm arr = new tree.MOVE(new tree.TEMP(t), new tree.MEM(currFrame.externalCall("calloc", params)));
 	tree.Exp mvlen = new tree.ESEQ(arr, new tree.TEMP(t));
@@ -458,7 +466,6 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 			return new tree.JUMP(f);
 		    return new tree.JUMP(t);
 		}
-		return this.unCx(t,f);
 	    }
 	    return new tree.CJUMP(tree.CJUMP.NE, exp, new tree.CONST(0), t, f);
 	}
@@ -594,9 +601,12 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
     public util.BoolList generateFalseBL(int size)
     {
 	util.BoolList blist = new util.BoolList(false, null);
-	for(int i = 0; i < size - 1; i++)
-	    blist.tail = new util.BoolList(false, null);
-
+	util.BoolList end = blist;
+	for(int i = 0; i < size-1; i++)
+	{
+	    end.tail = new util.BoolList(false, null);
+	    end = end.tail;
+	}
 	return blist;
     }
 
@@ -614,6 +624,8 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 
     public tree.ExpList buildExpList(syntaxtree.ExpList lst, int pos)
     {
+	if(lst.size() == 0)
+	    return null;
 	if(pos == lst.size() - 1)
 	    return new tree.ExpList(lst.elementAt(pos).accept(this).unEx(), null);
 

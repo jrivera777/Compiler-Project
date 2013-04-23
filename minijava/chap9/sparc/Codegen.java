@@ -69,7 +69,8 @@ public class Codegen {
     }
     void munchStm(tree.JUMP s)
     {
-	eOPER("\tba\t`l0\n", null, null, s.targets);
+	eOPER("\tba\t`j0\n", null, null, s.targets);
+	eOPER("\tnop\n", null, null);
     }
     void munchStm(tree.CJUMP s)
     {
@@ -104,19 +105,20 @@ public class Codegen {
 	//jump based on flags
 	switch(s.relop)
 	{
-	    case tree.CJUMP.EQ: eOPER("\tbe `l0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
-	    case tree.CJUMP.NE:eOPER("\tbne `l0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
-	    case tree.CJUMP.LT:eOPER("\tbl `l0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
-	    case tree.CJUMP.GT:eOPER("\tbg `l0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
-	    case tree.CJUMP.LE:eOPER("\tble `l0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
-	    case tree.CJUMP.GE: eOPER("\tbge `l0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+	    case tree.CJUMP.EQ: eOPER("\tbe `j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+	    case tree.CJUMP.NE:eOPER("\tbne `j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+	    case tree.CJUMP.LT:eOPER("\tbl `j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+	    case tree.CJUMP.GT:eOPER("\tbg `j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+	    case tree.CJUMP.LE:eOPER("\tble `j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
+	    case tree.CJUMP.GE: eOPER("\tbge `j0\n", null, null, new temp.LabelList(s.iftrue, null)); break;
 	    default:throw new Error("Bad RELOP.");
 	}
+	eOPER("\tnop\n", null, null);
     }
 
     void munchStm(tree.LABEL s)
     {
-	eOPER(((tree.LABEL)s).toString() + ":\n", null, null);
+	eOPER(((tree.LABEL)s).label.toString() + ":\n", null, null);
     }
 
     void munchStm(tree.MOVE s)
@@ -128,7 +130,9 @@ public class Codegen {
 	    {
 		tree.CONST src = ((tree.CONST)s.src);
 		if(is13bitCONST(s.src))
-		    eOPER("\tmov\t" +src.value + ", `d0\n", L(dst.temp, null), null);
+		{
+		    eOPER("\tmov\t" + src.value + ", `d0\n", L(dst.temp, null), null);
+		}
 		else
 		{
 		    eOPER("\tsethi\t%hi(" + src.value  +"), `d0\n", L(dst.temp, null), null);
@@ -138,8 +142,10 @@ public class Codegen {
 	    else if(s.src instanceof tree.TEMP)
 	    {
 		tree.TEMP src = ((tree.TEMP)s.src);
-		eOPER("\tmov\t`s1, `d0\n", L(dst.temp, null),L(src.temp, null));
+		eOPER("\tmov\t`s0, `d0\n", L(dst.temp, null),L(src.temp, null));
 	    }
+	    else
+		eOPER("\tmov\t`s0, `d0\n", L(dst.temp, null), L(munchExp(s.src, null), null));
 	}
 	else if (s.dst instanceof tree.MEM)
 	{
@@ -171,21 +177,19 @@ public class Codegen {
 	    else
 		eOPER("\tst\t`s1, [`s0 + 0]", null, L(munchExp(s.dst,null),
 						      L(munchExp(s.src, null), null)));
-
-	    // tree.Exp e = ((tree.MEM) s.dst).exp;
-	    // // MOVE(MEM(e), s.src)
-	    // eOPER("\tst\t`s1, [`s0]\n", null,
-	    // 	  L(munchExp(e, transient1), L(munchExp(s.src, transient2), null)));
 	}
 	else
+	{
+	    System.out.println(s.dst.toString());
 	    throw new Error("Bad MOVE destination.");
+	}
     }
 
-    // Here is munchExp as specified by Appel on p. 193.
-    temp.Temp munchExp(tree.Exp e)
-    {
-	return munchExp(e, null);
-    }
+    // // Here is munchExp as specified by Appel on p. 193.
+    // temp.Temp munchExp(tree.Exp e)
+    // {
+    // 	return munchExp(e, null);
+    // }
 
     temp.Temp munchExp(tree.CONST c, temp.Temp r)
     {
@@ -263,7 +267,7 @@ public class Codegen {
 	{
 	    tree.CONST right = ((tree.CONST)n.right);
 	    if(is13bitCONST(right))
-		eOPER("\tadd\t`s0, " + right.value + ", `d0\n", L(reg, null), L(munchExp(n.left, null), null));
+		eOPER(operation + "`s0, " + right.value + ", `d0\n", L(reg, null), L(munchExp(n.left, null), null));
 	    else
 	    {
 		eOPER("\tsethi\t%hi(" + right.value  +"), `d0\n", L(transient1, null), null);
@@ -288,23 +292,26 @@ public class Codegen {
     temp.Temp munchExp(tree.CALL n, temp.Temp r)
     {
 	temp.Temp reg;
-	reg = (r == null) ? new temp.Temp() : r;
+	reg = (r == null) ? frame.outgoingArgs[0] : r;
 
 	int argCount = 0;
-	int fpCount = 68;
+	int spCount = 92;
 	tree.ExpList args = n.args;
 	while(args != null)
 	{
-	    // if( argCount <= 5)
-
-	    // else
-	    // {
-	    // 	eOPER("\tst\t`s0, [%sp+" + fpCount +"]", null, L(munchExp(args.head, transient3),null));
-	    // 	fpCount+=4;
-	    // 	argCount++;
-	    // }
+	    if( argCount <= 5)
+		munchExp(args.head, frame.outgoingArgs[argCount++]);
+	    else
+	    {
+	    	eOPER("\tst\t`s0, [%sp +" + spCount + "]", null, L(munchExp(args.head, transient3),null));
+	    	spCount+=4;
+	    	argCount++;
+	    }
 	    args = args.tail;
 	}
+	tree.NAME nm = (tree.NAME)n.func;
+	eOPER("\tcall `j0\n", null, null, new temp.LabelList(nm.label, null));
+	eOPER("\tnop\n", null, null);
 	return reg;
     }
 
