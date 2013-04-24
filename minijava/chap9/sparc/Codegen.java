@@ -70,7 +70,7 @@ public class Codegen {
     void munchStm(tree.JUMP s)
     {
 	eOPER("\tba\t`j0\n", null, null, s.targets);
-	eOPER("\tnop\n", null, null);
+	eOPER("\tnop\n", null, null); //is this needed?
     }
     void munchStm(tree.CJUMP s)
     {
@@ -110,7 +110,7 @@ public class Codegen {
 	    {
 		eOPER("\tsethi\t%hi(" + right.value  +"), `d0\n", L(transient1, null), null);
 		eOPER("\tor\t`s0, %lo(" + right.value + "), `d0\n", L(transient1, null), L(transient1, null));
-		eOPER("\tcmp\t`s0, `s1\n", null, L(munchExp(s.left, null),L(transient1, null))); //use transients?
+		eOPER("\tcmp\t`s0, `s1\n", null, L(munchExp(s.left, transient2),L(transient1, null))); //use transients?
 	    }
 	}
 	else
@@ -158,12 +158,33 @@ public class Codegen {
 		tree.TEMP src = ((tree.TEMP)s.src);
 		eOPER("\tmov\t`s0, `d0\n", L(dst.temp, null),L(src.temp, null));
 	    }
-	    // else if(s.src instanceof tree.BINOP)
-	    // {
-	    // 	munchExp(s.src, dst.temp);
-	    // }
 	    else if(s.src instanceof tree.MEM)
-		munchExp(s.src, dst.temp);
+	    {
+		tree.MEM location = (tree.MEM)s.src;
+		if(location.exp instanceof tree.BINOP)
+		{
+		    tree.BINOP bexp = (tree.BINOP)location.exp;
+		    if(bexp.binop == tree.BINOP.PLUS)
+		    {
+			if(bexp.left instanceof tree.CONST)
+			{
+			    tree.CONST left = (tree.CONST)bexp.left;
+			    eOPER("\tld\t[`s0 + " + left.value  + "], `d0\n", L(dst.temp, null), L(munchExp(bexp.right, transient3), null));
+			}
+			else if(bexp.right instanceof tree.CONST)
+			{
+			    tree.CONST right = (tree.CONST)bexp.right;
+			    eOPER("\tld\t[`s0 + " + right.value  + "], `d0\n", L(dst.temp, null), L(munchExp(bexp.left, transient3), null));
+			}
+			else
+			    eOPER("\tld\t[`s0 + `s1], `d0\n", L(dst.temp, null), L(munchExp(bexp.left, transient3),
+										   L(munchExp(bexp.right, transient2),
+										     null)));
+		    }
+		}
+		else
+		    eOPER("\tld\t[`s0 + `s1], `d0\n", L(dst.temp, null),  L(munchExp(s.src, transient3), L(frame.g0, null)));
+	    }
 	    else
 		eOPER("\tmov\t`s0, `d0\n", L(dst.temp, null), L(munchExp(s.src, null), null));
 	}
@@ -178,7 +199,7 @@ public class Codegen {
 		    if(bexp.left instanceof tree.CONST)
 		    {
 			tree.CONST left = (tree.CONST)bexp.left;
-			eOPER("\tst\t`s1, [`s0 + " + left.value  + "]\n", null, L(munchExp(bexp.right, null),L(munchExp(s.src, null), null)));
+			eOPER("\tst\t`s1, [`s0 + " + left.value  + "]\n", null, L(munchExp(bexp.right, transient3),L(munchExp(s.src, transient2), null)));
 		    }
 		    else if(bexp.right instanceof tree.CONST)
 		    {
@@ -286,16 +307,16 @@ public class Codegen {
 	{
 	    tree.CONST right = ((tree.CONST)n.right);
 	    if(is13bitCONST(right))
-		eOPER(operation + "`s0, " + right.value + ", `d0\n", L(reg, null), L(munchExp(n.left, null), null));
+		eOPER(operation + "`s0, " + right.value + ", `d0\n", L(reg, null), L(munchExp(n.left, transient1), null));
 	    else
 	    {
 		eOPER("\tsethi\t%hi(" + right.value  +"), `d0\n", L(transient1, null), null);
 		eOPER("\tor\t`s0, %lo(" + right.value + "), `d0\n", L(transient1, null), L(transient1, null));
-		eOPER(operation + "`s1, `s0, `d0\n", L(reg, null), L(transient1, L(munchExp(n.left, null), null))); //use transients?
+		eOPER(operation + "`s1, `s0, `d0\n", L(reg, null), L(transient1, L(munchExp(n.left, transient2), null))); //use transients?
 	    }
 	}
 	else
-	    eOPER(operation + "`s0, `s1, `d0\n", L(reg, null), L(munchExp(n.left, null), L(munchExp(n.right, null),null))); //use transients?
+	    eOPER(operation + "`s0, `s1, `d0\n", L(reg, null), L(munchExp(n.left, transient1), L(munchExp(n.right, transient2),null))); //use transients?
 
 	return reg;
     }
@@ -326,9 +347,9 @@ public class Codegen {
 		    eOPER("\tld\t[`s0 + " + right.value  + "], `d0\n", L(reg, null), L(munchExp(bexp.left, null), null));
 		}
 		else
-		    eOPER("\tld\t`s2, [`s0 + `s1]\n", null, L(munchExp(bexp.left, null),
+		    eOPER("\tld\t[`s0 + `s1], `d0\n", L(reg, null), L(munchExp(bexp.left, null),
 							      L(munchExp(bexp.right,null),
-								L(reg, null))));
+								null)));
 	    }
 	}
 	else if(n.exp instanceof tree.TEMP)
@@ -344,7 +365,7 @@ public class Codegen {
     temp.Temp munchExp(tree.CALL n, temp.Temp r)
     {
 	temp.Temp reg;
-	reg = (r == null) ? frame.outgoingArgs[0] : r;
+	reg = (r == null) ? frame.RVCaller() : r;
 
 	int argCount = 0;
 	int spCount = 92;
@@ -355,7 +376,8 @@ public class Codegen {
 	    {
 		if(args.head instanceof tree.TEMP)
 		{
-		    eOPER("\tmov\t`s0, `d0\n", L(frame.outgoingArgs[argCount++], null), L(((tree.TEMP)args.head).temp, null));
+		    tree.TEMP currArg = (tree.TEMP)args.head;
+		    eOPER("\tmov\t`s0, `d0\n", L(frame.outgoingArgs[argCount++], null), L(currArg.temp, null));
 		}
 		else
 		    munchExp(args.head, frame.outgoingArgs[argCount++]);
@@ -369,8 +391,20 @@ public class Codegen {
 	    args = args.tail;
 	}
 	tree.NAME nm = (tree.NAME)n.func;
-	eOPER("\tcall `j0\n", null, null, new temp.LabelList(nm.label, null));
-	eOPER("\tnop\n", null, null);
+	assem.InstrList tracer = null;
+	assem.InstrList currInstr = ilist;
+	while(currInstr.tail != null)
+	{
+	    tracer = currInstr;
+	    currInstr = currInstr.tail;
+	}
+	if(tracer != null)
+	    tracer.tail = new assem.InstrList(new assem.OPER("\tcall `j0\n", null, null, new temp.LabelList(nm.label, null)), currInstr);
+	else
+	{
+	    eOPER("\tcall `j0\n", null, null, new temp.LabelList(nm.label, null));
+	    eOPER("\tnop\n", null, null);
+	}
 	return reg;
     }
 
@@ -387,6 +421,11 @@ public class Codegen {
 	if (e instanceof tree.CALL) return munchExp((tree.CALL) e, r);
 	// Since we've canonicalized, tree.ESEQ should not be a possibility.
 	else throw new Error("munchExp dispatch");
+    }
+
+    void comment(String com)
+    {
+	eOPER(com + "\n", null, null);
     }
 
     assem.InstrList codegen(tree.Stm s)
