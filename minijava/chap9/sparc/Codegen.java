@@ -158,6 +158,12 @@ public class Codegen {
 		tree.TEMP src = ((tree.TEMP)s.src);
 		eOPER("\tmov\t`s0, `d0\n", L(dst.temp, null),L(src.temp, null));
 	    }
+	    // else if(s.src instanceof tree.BINOP)
+	    // {
+	    // 	munchExp(s.src, dst.temp);
+	    // }
+	    else if(s.src instanceof tree.MEM)
+		munchExp(s.src, dst.temp);
 	    else
 		eOPER("\tmov\t`s0, `d0\n", L(dst.temp, null), L(munchExp(s.src, null), null));
 	}
@@ -172,15 +178,15 @@ public class Codegen {
 		    if(bexp.left instanceof tree.CONST)
 		    {
 			tree.CONST left = (tree.CONST)bexp.left;
-			eOPER("\tst\t`s0, [`s1 + " + left.value  + "]", null, L(munchExp(bexp.right, null),L(munchExp(s.src, null), null)));
+			eOPER("\tst\t`s1, [`s0 + " + left.value  + "]\n", null, L(munchExp(bexp.right, null),L(munchExp(s.src, null), null)));
 		    }
 		    else if(bexp.right instanceof tree.CONST)
 		    {
 			tree.CONST right = (tree.CONST)bexp.right;
-			eOPER("\tst\t`s0, [`s1 + " + right.value  + "]", null, L(munchExp(bexp.left, null),L(munchExp(s.src, null), null)));
+			eOPER("\tst\t`s1, [`s0 + " + right.value  + "]\n", null, L(munchExp(bexp.left, null),L(munchExp(s.src, null), null)));
 		    }
 		    else
-			eOPER("\tst\t`s2, [`s0 + `s1]", null, L(munchExp(bexp.left, null),
+			eOPER("\tst\t`s2, [`s0 + `s1]\n", null, L(munchExp(bexp.left, null),
 								L(munchExp(bexp.right,null),
 								  L(munchExp(s.src, null), null))));
 		}
@@ -189,8 +195,7 @@ public class Codegen {
 
 	    }
 	    else
-		eOPER("\tst\t`s1, [`s0 + 0]", null, L(munchExp(s.dst,null),
-						      L(munchExp(s.src, null), null)));
+		eOPER("\tst\t`s1, [`s0 + `s2]\n", null, L(munchExp(s.dst, null), L(munchExp(s.src, null), L(frame.g0, null))));
 	}
 	else
 	{
@@ -297,15 +302,47 @@ public class Codegen {
 
     temp.Temp munchExp(tree.MEM n, temp.Temp r)
     {
+	if(n.exp instanceof tree.TEMP)
+	{
+	    return ((tree.TEMP)n.exp).temp;
+	    //eOPER("\tld\t[`s0 + `s1], `d0\n", L(reg, null), L(((tree.TEMP)n.exp).temp, L(frame.g0, null)));
+	}
+
 	temp.Temp reg;
 	reg = (r == null) ? new temp.Temp() : r;
-
-	return munchExp(n.exp, reg);
+	if(n.exp instanceof tree.BINOP)
+	{
+	    tree.BINOP bexp = (tree.BINOP)n.exp;
+	    if(bexp.binop == tree.BINOP.PLUS)
+	    {
+		if(bexp.left instanceof tree.CONST)
+		{
+		    tree.CONST left = (tree.CONST)bexp.left;
+		    eOPER("\tld\t[`s0 + " + left.value  + "], `d0\n", L(reg, null), L(munchExp(bexp.right, null), null));
+		}
+		else if(bexp.right instanceof tree.CONST)
+		{
+		    tree.CONST right = (tree.CONST)bexp.right;
+		    eOPER("\tld\t[`s0 + " + right.value  + "], `d0\n", L(reg, null), L(munchExp(bexp.left, null), null));
+		}
+		else
+		    eOPER("\tld\t`s2, [`s0 + `s1]\n", null, L(munchExp(bexp.left, null),
+							      L(munchExp(bexp.right,null),
+								L(reg, null))));
+	    }
+	}
+	else if(n.exp instanceof tree.TEMP)
+	{
+	    return ((tree.TEMP)n.exp).temp;
+	    //eOPER("\tld\t[`s0 + `s1], `d0\n", L(reg, null), L(((tree.TEMP)n.exp).temp, L(frame.g0, null)));
+	}
+	else
+	    throw new Error("WUTANG!");
+	return reg;
     }
 
     temp.Temp munchExp(tree.CALL n, temp.Temp r)
     {
-//	System.out.println("Entering Call");
 	temp.Temp reg;
 	reg = (r == null) ? frame.outgoingArgs[0] : r;
 
@@ -314,7 +351,6 @@ public class Codegen {
 	tree.ExpList args = n.args;
 	while(args != null)
 	{
-	    //   System.out.println("Arg: " + args.head.toString());
 	    if( argCount <= 5)
 	    {
 		if(args.head instanceof tree.TEMP)
@@ -326,7 +362,7 @@ public class Codegen {
 	    }
 	    else
 	    {
-	    	eOPER("\tst\t`s0, [%sp +" + spCount + "]", null, L(munchExp(args.head, transient3),null));
+	    	eOPER("\tst\t`s0, [%sp +" + spCount + "]\n", null, L(munchExp(args.head, transient3),null));
 	    	spCount+=4;
 	    	argCount++;
 	    }
