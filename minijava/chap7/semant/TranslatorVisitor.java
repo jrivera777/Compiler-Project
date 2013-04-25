@@ -336,10 +336,11 @@ public class TranslatorVisitor extends visitor.ExpDepthFirstVisitor
 	{
 	    if(val instanceof tree.CONST)
 	    {
-		tree.CONST neg = (tree.CONST)val;
-		if(neg.value == 0)
-		    return new Ex(new tree.CONST(1));
-		return new Ex(new tree.CONST(0));
+	    	tree.CONST neg = (tree.CONST)val;
+
+	    	if(neg.value == 0)
+	    	    return new Ex(new tree.CONST(1));
+	    	return new Ex(new tree.CONST(0));
 	    }
 	}
 	return new RelCx(tree.CJUMP.EQ, val, new tree.CONST(0));
