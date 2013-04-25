@@ -1,0 +1,38 @@
+Doug Otstott
+Joseph Rivera
+
+Assignment 7: Sparc Code Selection
+
+Our Results
+=====================================================
+
+- Factorial.java compiles and runs correctly.
+
+- Benmarch.java compiles and runs corrctly.  Using the time command usually gives us:
+
+  jrive034@mozart:~/compiler 109% time ./benchmark
+  350
+  3.63u 0.01s 0:03.64 100.0%
+
+- BinaryTree.java compiles and runs correctly.
+
+- BinarySearch.java compiles only with -r, but gives only partially correct results.  The Search method gives the wrong result twice.
+
+- BubbleSort.java compiles only with -r, but gives partially correct results.  Multiple values returned are not accurate.
+  We feel that some load instructions are missing or incorrect, but couldn't pin-point it.
+
+- LinearSearch.java compiles only with -r, and gives correct results.
+
+- LinkedList.java compiles and runs correctly.
+
+- Tak.java compiles and runs correctly.
+
+- QuickSort.java fails to compile because it runs out of registers.  With -r it still runs out of registers, but by a much less.
+
+====================================================
+
+Overall, this was a very fun and challenging project.  Despite not working 100%, we are happy with our progress.
+If you pin-point our exact mistakes, please let us know, as we are both interested in fixing them, and attempting
+to extend it further.
+
+We hope you have a good summer.

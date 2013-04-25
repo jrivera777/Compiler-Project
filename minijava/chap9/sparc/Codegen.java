@@ -87,7 +87,7 @@ public class Codegen
 	    {
 		eOPER("\tsethi\t%hi(" + left.value  +"), `d0\n", L(transient1, null), null);
 		eOPER("\tor\t`s0, %lo(" + left.value + "), `d0\n", L(transient1, null), L(transient1, null));
-		eOPER("\tcmp\t`s1, `s0\n", null, L(transient1, L(munchExp(s.right, transient2), null))); //use transients?
+		eOPER("\tcmp\t`s1, `s0\n", null, L(transient1, L(munchExp(s.right, transient2), null)));
 	    }
 
 	    //jump based on flags (flip comparison operators because
@@ -109,16 +109,16 @@ public class Codegen
 	{
 	    tree.CONST right = ((tree.CONST)s.right);
 	    if(is13bitCONST(right))
-		eOPER("\tcmp\t`s0, " + ((tree.CONST)s.right).value + "\n", null, L(munchExp(s.left, transient1), null)); //use transient?
+		eOPER("\tcmp\t`s0, " + ((tree.CONST)s.right).value + "\n", null, L(munchExp(s.left, transient1), null));
 	    else
 	    {
 		eOPER("\tsethi\t%hi(" + right.value  +"), `d0\n", L(transient1, null), null);
 		eOPER("\tor\t`s0, %lo(" + right.value + "), `d0\n", L(transient1, null), L(transient1, null));
-		eOPER("\tcmp\t`s0, `s1\n", null, L(munchExp(s.left, transient2),L(transient1, null))); //use transients?
+		eOPER("\tcmp\t`s0, `s1\n", null, L(munchExp(s.left, transient2),L(transient1, null)));
 	    }
 	}
 	else
-	    eOPER("\tcmp\t`s0, `s1\n", null, L(munchExp(s.left), L(munchExp(s.right),null))); //use transients?
+	    eOPER("\tcmp\t`s0, `s1\n", null, L(munchExp(s.left), L(munchExp(s.right),null)));
 
 	//jump based on flags
 	switch(s.relop)
@@ -157,11 +157,11 @@ public class Codegen
 		    eOPER("\tor\t`s0, %lo(" + src.value + "), `d0\n", L(dst.temp, null), L(dst.temp, null));
 		}
 	    }
-	    else if(s.src instanceof tree.TEMP)
-	    {
-		tree.TEMP src = ((tree.TEMP)s.src);
-		eOPER("\tmov\t`s0, `d0\n", L(dst.temp, null),L(src.temp, null));
-	    }
+	    // else if(s.src instanceof tree.TEMP)
+	    // {
+	    // 	tree.TEMP src = ((tree.TEMP)s.src);
+	    // 	eOPER("\tmov\t`s0, `d0\n", L(dst.temp, null),L(src.temp, null));
+	    // }
 	    else if(s.src instanceof tree.MEM)
 	    {
 		tree.MEM location = (tree.MEM)s.src;
@@ -187,10 +187,12 @@ public class Codegen
 		    }
 		}
 		else
-		    eOPER("\tld\t[`s0 + `s1], `d0\n", L(dst.temp, null),  L(munchExp(s.src, transient3), L(frame.g0, null)));
+		    eOPER("\tld\t[`s0 + `s1], `d0\n", L(dst.temp, null),  L(munchExp(s.src), L(frame.g0, null)));
 	    }
 	    else
+	    {
 		eOPER("\tmov\t`s0, `d0\n", L(dst.temp, null), L(munchExp(s.src, null), null));
+	    }
 	}
 	else if (s.dst instanceof tree.MEM)
 	{
@@ -208,7 +210,7 @@ public class Codegen
 		    else if(bexp.right instanceof tree.CONST)
 		    {
 			tree.CONST right = (tree.CONST)bexp.right;
-			eOPER("\tst\t`s1, [`s0 + " + right.value  + "]\n", null, L(munchExp(bexp.left),L(munchExp(s.src), null)));
+			eOPER("\tst\t`s1, [`s0 + " + right.value  + "]\n", null, L(munchExp(bexp.left, transient3),L(munchExp(s.src, transient2), null)));
 		    }
 		    else
 			eOPER("\tst\t`s2, [`s0 + `s1]\n", null, L(munchExp(bexp.left),
@@ -220,7 +222,7 @@ public class Codegen
 
 	    }
 	    else
-		eOPER("\tst\t`s1, [`s0 + `s2]\n", null, L(munchExp(s.dst), L(munchExp(s.src), L(frame.g0, null))));
+		eOPER("\tst\t`s1, [`s0 + `s2]\n", null, L(munchExp(location, transient3), L(munchExp(s.src), L(frame.g0, null))));
 	}
 	else
 	{
@@ -259,7 +261,7 @@ public class Codegen
     }
     temp.Temp munchExp(tree.BINOP n, temp.Temp r)
     {
-	temp.Temp reg;
+	temp.Temp reg = null;
 	reg = (r == null) ? new temp.Temp() : r;
 	String operation = "\t";
 	switch(n.binop)
@@ -295,32 +297,33 @@ public class Codegen
 		break;
 	    }
 	}
+
 	if(n.left instanceof tree.CONST)
 	{
 	    tree.CONST left = ((tree.CONST)n.left);
 	    if(is13bitCONST(left))
-		eOPER(operation + "`s0, " + left.value + ", `d0\n", L(reg, null), L(munchExp(n.right, transient1), null));
+		eOPER(operation + "`s0, " + left.value + ", `d0\n", L(reg, null), L(munchExp(n.right, reg), null));
 	    else
 	    {
-		eOPER("\tsethi\t%hi(" + left.value  +"), `d0\n", L(transient1, null), null);
-		eOPER("\tor\t`s0, %lo(" + left.value + "), `d0\n", L(transient1, null), L(transient1, null));
-		eOPER(operation + "`s0, `s1, `d0\n", L(reg, null), L(transient1, L(munchExp(n.right), null))); //use transients?
+		eOPER("\tsethi\t%hi(" + left.value  +"), `d0\n", L(reg, null), null);
+		eOPER("\tor\t`s0, %lo(" + left.value + "), `d0\n", L(reg, null), L(reg, null));
+		eOPER(operation + "`s0, `s1, `d0\n", L(reg, null), L(reg, L(munchExp(n.right, transient1), null)));
 	    }
 	}
 	else if(n.right instanceof tree.CONST)
 	{
 	    tree.CONST right = ((tree.CONST)n.right);
 	    if(is13bitCONST(right))
-		eOPER(operation + "`s0, " + right.value + ", `d0\n", L(reg, null), L(munchExp(n.left, transient1), null));
+		eOPER(operation + "`s0, " + right.value + ", `d0\n", L(reg, null), L(munchExp(n.left, reg), null));
 	    else
 	    {
-		eOPER("\tsethi\t%hi(" + right.value  +"), `d0\n", L(transient1, null), null);
-		eOPER("\tor\t`s0, %lo(" + right.value + "), `d0\n", L(transient1, null), L(transient1, null));
-		eOPER(operation + "`s1, `s0, `d0\n", L(reg, null), L(transient1, L(munchExp(n.left, transient2), null))); //use transients?
+		eOPER("\tsethi\t%hi(" + right.value  +"), `d0\n", L(reg, null), null);
+		eOPER("\tor\t`s0, %lo(" + right.value + "), `d0\n", L(reg, null), L(transient1, null));
+		eOPER(operation + "`s1, `s0, `d0\n", L(reg, null), L(reg, L(munchExp(n.left, transient1), null)));
 	    }
 	}
 	else
-	    eOPER(operation + "`s0, `s1, `d0\n", L(reg, null), L(munchExp(n.left, transient1), L(munchExp(n.right, transient2),null))); //use transients?
+	    eOPER(operation + "`s0, `s1, `d0\n", L(reg, null), L(munchExp(n.left, transient1), L(munchExp(n.right, transient2),null)));
 
 	return reg;
     }
@@ -328,7 +331,9 @@ public class Codegen
     temp.Temp munchExp(tree.MEM n, temp.Temp r)
     {
 	if(n.exp instanceof tree.TEMP)
+	{
 	    return ((tree.TEMP)n.exp).temp;
+	}
 
 	temp.Temp reg;
 	reg = (r == null) ? new temp.Temp() : r;
@@ -340,12 +345,12 @@ public class Codegen
 		if(bexp.left instanceof tree.CONST)
 		{
 		    tree.CONST left = (tree.CONST)bexp.left;
-		    eOPER("\tld\t[`s0 + " + left.value  + "], `d0\n", L(reg, null), L(munchExp(bexp.right), null));
+		    eOPER("\tld\t[`s0 + " + left.value  + "], `d0\n", L(reg, null), L(munchExp(bexp.right, reg), null));
 		}
 		else if(bexp.right instanceof tree.CONST)
 		{
 		    tree.CONST right = (tree.CONST)bexp.right;
-		    eOPER("\tld\t[`s0 + " + right.value  + "], `d0\n", L(reg, null), L(munchExp(bexp.left), null));
+		    eOPER("\tld\t[`s0 + " + right.value  + "], `d0\n", L(reg, null), L(munchExp(bexp.left, reg), null));
 		}
 		else
 		    eOPER("\tld\t[`s0 + `s1], `d0\n", L(reg, null), L(munchExp(bexp.left),
@@ -353,8 +358,6 @@ public class Codegen
 									null)));
 	    }
 	}
-	else if(n.exp instanceof tree.TEMP)
-	    reg = ((tree.TEMP)n.exp).temp;
 	else
 	    throw new Error("WUTANG!");
 	return reg;
